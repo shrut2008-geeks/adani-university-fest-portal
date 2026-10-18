@@ -98,7 +98,7 @@ export const Navbar = () => {
               className="text-xs hover:underline font-medium transition-colors inline-flex items-center gap-1"
               style={{ color: 'var(--text-muted)' }}
             >
-              adani.ac.in
+              adaniuni.ac.in
               <ExternalLink className="w-3 h-3" />
             </a>
 
@@ -172,7 +172,7 @@ export const Navbar = () => {
 
           <div className="pt-3 border-t border-[var(--border)] space-y-2">
             <a
-              href="https://adani.ac.in"
+              href="https://www.adaniuni.ac.in/"
               target="_blank"
               rel="noreferrer"
               className="text-xs font-medium flex items-center gap-1 px-3 py-1"
