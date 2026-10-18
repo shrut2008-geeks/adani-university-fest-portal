@@ -92,7 +92,7 @@ export const Navbar = () => {
           <div className="hidden min-[1100px]:flex items-center gap-4 flex-shrink-0 whitespace-nowrap">
             {/* Small text link for university */}
             <a
-              href="https://adani.ac.in"
+              href="https://www.adaniuni.ac.in/"
               target="_blank"
               rel="noreferrer"
               className="text-xs hover:underline font-medium transition-colors inline-flex items-center gap-1"
