@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #F6F4F9;
+  --surface: #FFFFFF;
+  --border: #E6E0EE;
+  --hero-bg: #F3E8F5;
+  --text: #1E1B2E;
+  --text-muted: #6B6880;
+  --primary: #6B1B72;
+  --footer-bg: #2A1230;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Form inputs styling rule: border --border, focus ring --primary, background --surface */
+  input, select, textarea {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(107, 27, 114, 0.2);
+  }
+}
+
+/* Card utility: 1px --border and shadow 0 1px 3px rgba(30,27,46,0.08) */
+.theme-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(30, 27, 46, 0.08);
+  transition: all 0.2s ease-in-out;
+}
+
+.theme-card:hover {
+  box-shadow: 0 4px 12px -2px rgba(30, 27, 46, 0.12);
+  border-color: #D6CEE0;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: #D0C8D8;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
