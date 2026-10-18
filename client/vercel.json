@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://adani-university-fest-portal.onrender.com/api/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
