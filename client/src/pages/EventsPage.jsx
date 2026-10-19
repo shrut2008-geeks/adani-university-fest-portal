@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/Modal';
-import { StatusBadge } from '../components/StatusBadge';
+import { StatusBadge, getEventStatusInfo } from '../components/StatusBadge';
 import { 
   Calendar, 
   MapPin, 
@@ -13,7 +14,8 @@ import {
   Trash2, 
   Ticket, 
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 
 // Shared fill percentage function: 1 decimal place (e.g. 0.4%)
@@ -24,6 +26,7 @@ export const fillPct = (registered, capacity) => {
 
 export const EventsPage = () => {
   const { user, isRole, token, isAuthenticated } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [clubs, setClubs] = useState([]);
@@ -145,6 +148,7 @@ export const EventsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to create event');
 
+      toast.success(`Event "${formData.title}" scheduled successfully!`, 'Event Scheduled');
       setIsCreateOpen(false);
       fetchEvents();
     } catch (err) {
@@ -176,6 +180,7 @@ export const EventsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update event');
 
+      toast.success(`Event "${formData.title}" updated successfully!`, 'Event Updated');
       setIsEditOpen(false);
       fetchEvents();
     } catch (err) {
@@ -196,9 +201,10 @@ export const EventsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to delete event');
 
+      toast.success(`Event "${evt.title}" deleted successfully.`, 'Event Deleted');
       fetchEvents();
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      toast.error(err.message, 'Failed to Delete Event');
     }
   };
 
@@ -220,10 +226,10 @@ export const EventsPage = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
-      alert(data.message || 'Successfully registered for event!');
+      toast.success(data.message || 'Successfully registered for event!', 'Registration Confirmed');
       fetchEvents();
     } catch (err) {
-      alert(`Registration Error: ${err.message}`);
+      toast.error(err.message, 'Registration Error');
     } finally {
       setRegisteringId(null);
     }
@@ -322,8 +328,20 @@ export const EventsPage = () => {
       {/* Events Cards Grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="h-64 rounded-2xl animate-pulse" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
+          {[1, 2, 3, 4, 5, 6].map((n) => (
+            <div key={n} className="h-72 rounded-2xl relative overflow-hidden theme-card p-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <div className="w-20 h-5 rounded-full bg-gray-200 animate-pulse" />
+                  <div className="w-16 h-4 rounded bg-gray-200 animate-pulse" />
+                </div>
+                <div className="w-1/3 h-3 rounded bg-gray-200 animate-pulse" />
+                <div className="w-3/4 h-5 rounded bg-gray-200 animate-pulse" />
+                <div className="w-full h-12 rounded-xl bg-gray-100 animate-pulse" />
+                <div className="w-full h-2 rounded bg-gray-200 animate-pulse" />
+              </div>
+              <div className="absolute inset-0 animate-shimmer" />
+            </div>
           ))}
         </div>
       ) : error ? (
@@ -350,9 +368,9 @@ export const EventsPage = () => {
                 className="flex flex-col justify-between rounded-2xl p-6 theme-card transition-all relative group"
               >
                 <div className="space-y-4">
-                  {/* Status & Rating: If no reviews, muted grey with NO star icon */}
+                  {/* Status & Rating: Color-coded badge based on real data fields */}
                   <div className="flex items-center justify-between">
-                    <StatusBadge status={evt.status} />
+                    <StatusBadge status={getEventStatusInfo(evt).label} />
                     {hasReviews ? (
                       <span className="flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
                         <span className="text-amber-500">★</span>
@@ -472,15 +490,22 @@ export const EventsPage = () => {
                     <button
                       onClick={() => handleRegisterEvent(evt.id)}
                       disabled={registeringId === evt.id}
-                      className="w-full py-2 px-3 rounded-xl text-xs font-bold text-white transition-all hover:opacity-95 shadow-sm"
+                      className="w-full py-2 px-3 rounded-xl text-xs font-bold text-white transition-all hover:opacity-95 shadow-sm btn-press disabled:opacity-60 flex items-center justify-center gap-2"
                       style={{ background: 'var(--primary)' }}
                     >
-                      {registeringId === evt.id ? 'Registering...' : 'Register'}
+                      {registeringId === evt.id ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Registering...</span>
+                        </>
+                      ) : (
+                        <span>Register</span>
+                      )}
                     </button>
                   ) : (
                     <button
                       onClick={() => handleRegisterEvent(evt.id)}
-                      className="w-full py-2 px-3 rounded-xl text-xs font-bold transition-all hover:bg-[var(--hero-bg)] border"
+                      className="w-full py-2 px-3 rounded-xl text-xs font-bold transition-all hover:bg-[var(--hero-bg)] border btn-press"
                       style={{
                         background: 'transparent',
                         borderColor: 'var(--primary)',

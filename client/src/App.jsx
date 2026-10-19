@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import { Navbar } from './components/Navbar';
 import { DashboardPage } from './pages/DashboardPage';
 import { ClubsPage } from './pages/ClubsPage';
@@ -15,9 +16,10 @@ import { LoginPage } from './pages/LoginPage';
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] font-sans">
-          <Navbar />
+      <ToastProvider>
+        <BrowserRouter>
+          <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] font-sans">
+            <Navbar />
 
           <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8">
             <Routes>
@@ -57,7 +59,8 @@ function App() {
           </footer>
         </div>
       </BrowserRouter>
-    </AuthProvider>
+    </ToastProvider>
+  </AuthProvider>
   );
 }
 

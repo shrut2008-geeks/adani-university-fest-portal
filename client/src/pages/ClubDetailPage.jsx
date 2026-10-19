@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
 import { 
@@ -12,12 +13,14 @@ import {
   Edit, 
   ArrowLeft, 
   Clock, 
-  AlertCircle 
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 
 export const ClubDetailPage = () => {
   const { id } = useParams();
   const { user, isRole, token } = useAuth();
+  const toast = useToast();
 
   const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -103,6 +106,7 @@ export const ClubDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add member');
 
+      toast.success('Member assigned to club successfully!', 'Member Added');
       setIsAddMemberOpen(false);
       fetchClubDetail();
     } catch (err) {
@@ -135,6 +139,7 @@ export const ClubDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update member');
 
+      toast.success('Member position updated successfully!', 'Member Updated');
       setIsEditMemberOpen(false);
       fetchClubDetail();
     } catch (err) {
@@ -154,9 +159,10 @@ export const ClubDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to remove member');
 
+      toast.success('Member removed from club.', 'Member Removed');
       fetchClubDetail();
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      toast.error(err.message, 'Failed to Remove Member');
     }
   };
 
@@ -176,6 +182,7 @@ export const ClubDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add achievement');
 
+      toast.success('Achievement recorded successfully!', 'Achievement Added');
       setIsAddAchOpen(false);
       setAchForm({ description: '' });
       fetchClubDetail();
@@ -196,9 +203,10 @@ export const ClubDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to delete achievement');
 
+      toast.success('Achievement deleted.', 'Achievement Removed');
       fetchClubDetail();
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      toast.error(err.message, 'Failed to Delete Achievement');
     }
   };
 

@@ -9,7 +9,8 @@ import {
   Mail,
   Sparkles,
   Eye,
-  EyeOff
+  EyeOff,
+  Loader2
 } from 'lucide-react';
 
 export const LoginPage = () => {
@@ -212,11 +213,14 @@ export const LoginPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white shadow-sm transition-all disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
+            className="w-full py-3 px-4 rounded-xl font-bold text-sm text-white shadow-sm transition-all disabled:opacity-50 mt-2 flex items-center justify-center gap-2 btn-press hover:opacity-95"
             style={{ background: 'var(--primary)' }}
           >
             {loading ? (
-              'Please wait...'
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Signing in...</span>
+              </>
             ) : mode === 'login' ? (
               <><LogIn className="w-4 h-4" /> Sign In</>
             ) : (
