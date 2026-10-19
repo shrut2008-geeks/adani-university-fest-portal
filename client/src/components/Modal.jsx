@@ -22,26 +22,20 @@ export const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-xl' 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity duration-300"
+        className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity"
         onClick={onClose}
-        aria-hidden="true"
       />
 
       {/* Modal Dialog */}
-      <div 
-        className={`relative w-full ${maxWidth} bg-white border border-[var(--border)] rounded-3xl shadow-2xl z-10 overflow-hidden transform animate-modal-in`}
-        role="dialog"
-        aria-modal="true"
-      >
+      <div className={`relative w-full ${maxWidth} bg-white border border-gray-200 rounded-2xl shadow-2xl z-10 overflow-hidden transform transition-all`}>
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4.5 border-b border-[var(--border)] bg-[#FAF8FB]">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-[#FAF8FB]">
           <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
             {title}
           </h3>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition-colors btn-press"
-            aria-label="Close dialog"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>

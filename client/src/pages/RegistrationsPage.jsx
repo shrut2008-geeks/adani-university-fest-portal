@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
 import { StatusBadge } from '../components/StatusBadge';
 import { 
   Ticket, 
@@ -17,7 +16,6 @@ import {
 
 export const RegistrationsPage = () => {
   const { user, isRole, token, isAuthenticated } = useAuth();
-  const toast = useToast();
   const [registrations, setRegistrations] = useState([]);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,10 +74,9 @@ export const RegistrationsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to cancel registration');
 
-      toast.success(`Registration for "${eventTitle}" cancelled.`, 'Pass Cancelled');
       fetchRegistrations();
     } catch (err) {
-      toast.error(err.message, 'Cancellation Error');
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -92,10 +89,9 @@ export const RegistrationsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to toggle attendance');
 
-      toast.success(data.message || 'Attendance status updated.', 'Attendance Updated');
       fetchRegistrations();
     } catch (err) {
-      toast.error(err.message, 'Attendance Error');
+      alert(`Error: ${err.message}`);
     }
   };
 

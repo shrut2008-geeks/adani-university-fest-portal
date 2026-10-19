@@ -5,30 +5,21 @@ export const StatusBadge = ({ status }) => {
 
   const getStyle = (val) => {
     switch (val.toLowerCase()) {
-      // Colour-coded status badges based on real event lifecycle/capacity
-      case 'open':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold';
-      case 'filling fast':
-      case 'filling_fast':
-        return 'bg-amber-50 text-amber-700 border-amber-200 font-semibold';
-      case 'full':
-        return 'bg-rose-50 text-rose-700 border-rose-200 font-semibold';
-      case 'completed':
-        return 'bg-slate-100 text-slate-600 border-slate-200 font-medium';
-
-      // Traditional event statuses
+      // Event Status — exact spec colors
       case 'planned':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200 font-semibold';
+        return 'bg-[#DBEAFE] text-[#1D4ED8] border-[#BFDBFE]';
       case 'ongoing':
-        return 'bg-amber-50 text-amber-700 border-amber-200 font-semibold';
+        return 'bg-[#FFEDD5] text-[#C2410C] border-[#FED7AA] font-semibold';
+      case 'completed':
+        return 'bg-[#F3E8FF] text-[#6B1B72] border-[#E9D5FF]';
 
-      // Payment Status
+      // Payment Status — exact spec colors
       case 'approved':
-        return 'bg-[#DCFCE7] text-[#15803D] border-[#BBF7D0] font-semibold';
+        return 'bg-[#DCFCE7] text-[#15803D] border-[#BBF7D0]';
       case 'pending':
-        return 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A] font-semibold';
+        return 'bg-[#FEF3C7] text-[#B45309] border-[#FDE68A]';
       case 'rejected':
-        return 'bg-rose-50 text-rose-700 border-rose-200 font-semibold';
+        return 'bg-rose-50 text-rose-700 border-rose-200';
 
       // Member Position
       case 'president':
@@ -52,36 +43,8 @@ export const StatusBadge = ({ status }) => {
   };
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs transition-colors border ${getStyle(status)}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStyle(status)}`}>
       {status}
     </span>
   );
-};
-
-// Helper to determine the colour-coded event status badge based on real data fields
-export const getEventStatusInfo = (event) => {
-  if (!event) return { label: 'Open', status: 'open' };
-
-  const rawStatus = (event.status || '').toLowerCase();
-  if (rawStatus === 'completed') {
-    return { label: 'Completed', status: 'completed' };
-  }
-
-  const regCount = parseInt(event.registrations_count ?? event.registration_count ?? 0, 10);
-  const cap = parseInt(event.venue_capacity ?? event.capacity ?? 0, 10);
-
-  if (cap > 0 && regCount >= cap) {
-    return { label: 'Full', status: 'full' };
-  }
-
-  if (cap > 0 && (regCount / cap) >= 0.8) {
-    return { label: 'Filling Fast', status: 'filling fast' };
-  }
-
-  return { label: 'Open', status: 'open' };
-};
-
-export const EventStatusBadge = ({ event }) => {
-  const { label } = getEventStatusInfo(event);
-  return <StatusBadge status={label} />;
 };

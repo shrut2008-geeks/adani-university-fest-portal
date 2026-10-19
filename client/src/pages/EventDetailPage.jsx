@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/Modal';
-import { StatusBadge, getEventStatusInfo } from '../components/StatusBadge';
+import { StatusBadge } from '../components/StatusBadge';
 import { 
   Calendar, 
   MapPin, 
@@ -18,14 +17,12 @@ import {
   Check, 
   Clock, 
   AlertCircle,
-  MessageSquare,
-  Loader2
+  MessageSquare
 } from 'lucide-react';
 
 export const EventDetailPage = () => {
   const { id } = useParams();
   const { user, isRole, token, isAuthenticated } = useAuth();
-  const toast = useToast();
 
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -93,7 +90,7 @@ export const EventDetailPage = () => {
 
   const handleRegister = async () => {
     if (!isAuthenticated) {
-      toast.info('Please sign in to register for events.', 'Sign In Required');
+      alert('Please sign in to register for events.');
       return;
     }
     setActionLoading(true);
@@ -109,10 +106,10 @@ export const EventDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
 
-      toast.success(data.message || 'Successfully registered!', 'Registration Confirmed');
+      alert(data.message || 'Successfully registered!');
       fetchEventDetail();
     } catch (err) {
-      toast.error(err.message, 'Registration Error');
+      alert(`Registration Error: ${err.message}`);
     } finally {
       setActionLoading(false);
     }
@@ -127,10 +124,9 @@ export const EventDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to toggle attendance');
 
-      toast.success(data.message || 'Attendance status updated.', 'Attendance Updated');
       fetchEventDetail();
     } catch (err) {
-      toast.error(err.message, 'Attendance Error');
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -154,7 +150,6 @@ export const EventDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to assign organiser');
 
-      toast.success('Organiser assigned successfully!', 'Organiser Added');
       setIsAddOrganiserOpen(false);
       setOrganiserForm({ member_id: '', role: '' });
       fetchEventDetail();
@@ -175,10 +170,9 @@ export const EventDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to remove organiser');
 
-      toast.success('Organiser role removed.', 'Organiser Removed');
       fetchEventDetail();
     } catch (err) {
-      toast.error(err.message, 'Removal Error');
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -203,7 +197,6 @@ export const EventDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to record payment');
 
-      toast.success('Payment recorded successfully!', 'Payment Recorded');
       setIsAddPaymentOpen(false);
       setPaymentForm({ sponsor_id: '', amount: '', status: 'Approved' });
       fetchEventDetail();
@@ -227,10 +220,9 @@ export const EventDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update payment');
 
-      toast.success(`Payment status updated to ${newStatus}.`, 'Payment Updated');
       fetchEventDetail();
     } catch (err) {
-      toast.error(err.message, 'Update Failed');
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -256,7 +248,7 @@ export const EventDetailPage = () => {
 
       setIsFeedbackOpen(false);
       setFeedbackForm({ rating: 5, comment: '' });
-      toast.success(data.message || 'Feedback submitted successfully!', 'Review Recorded');
+      alert(data.message);
       fetchEventDetail();
     } catch (err) {
       setFormError(err.message);

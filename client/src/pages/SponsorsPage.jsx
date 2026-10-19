@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
 import { 
@@ -10,13 +9,11 @@ import {
   Trash2, 
   CheckCircle, 
   Building2, 
-  AlertCircle,
-  Loader2
+  AlertCircle
 } from 'lucide-react';
 
 export const SponsorsPage = () => {
   const { isRole, token } = useAuth();
-  const toast = useToast();
 
   const [sponsors, setSponsors] = useState([]);
   const [payments, setPayments] = useState([]);
@@ -102,7 +99,6 @@ export const SponsorsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to add sponsor');
 
-      toast.success(`Sponsor "${sponsorName}" added successfully!`, 'Sponsor Added');
       setIsAddSponsorOpen(false);
       setSponsorName('');
       fetchData();
@@ -124,10 +120,9 @@ export const SponsorsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to delete sponsor');
 
-      toast.success(`Sponsor "${sponsor.name}" deleted.`, 'Sponsor Removed');
       fetchData();
     } catch (err) {
-      toast.error(err.message, 'Failed to Delete Sponsor');
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -152,7 +147,6 @@ export const SponsorsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to record payment');
 
-      toast.success('Funding payment recorded successfully!', 'Payment Recorded');
       setIsAddPaymentOpen(false);
       setPaymentForm(prev => ({ ...prev, sponsor_id: '', amount: '', status: 'Pending' }));
       fetchData();
@@ -176,10 +170,9 @@ export const SponsorsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update payment status');
 
-      toast.success(`Payment status changed to ${status}.`, 'Status Updated');
       fetchData();
     } catch (err) {
-      toast.error(err.message, 'Update Failed');
+      alert(`Error: ${err.message}`);
     }
   };
 

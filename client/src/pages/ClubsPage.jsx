@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/Modal';
 import { 
   Users, 
@@ -13,8 +12,7 @@ import {
   ArrowRight, 
   FolderPlus,
   AlertCircle,
-  UserPlus,
-  Loader2
+  UserPlus
 } from 'lucide-react';
 
 const pluralMember = (count) => {
@@ -24,7 +22,6 @@ const pluralMember = (count) => {
 
 export const ClubsPage = () => {
   const { user, isRole, token, isAuthenticated } = useAuth();
-  const toast = useToast();
   const navigate = useNavigate();
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +95,6 @@ export const ClubsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to create club');
 
-      toast.success(`Club "${formData.name}" created successfully!`, 'Club Created');
       setIsCreateOpen(false);
       fetchClubs();
     } catch (err) {
@@ -124,7 +120,6 @@ export const ClubsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update club');
 
-      toast.success(`Club "${formData.name}" updated successfully!`, 'Club Updated');
       setIsEditOpen(false);
       fetchClubs();
     } catch (err) {
@@ -147,10 +142,9 @@ export const ClubsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to delete club');
 
-      toast.success(`Club "${club.name}" deleted successfully.`, 'Club Deleted');
       fetchClubs();
     } catch (err) {
-      toast.error(err.message, 'Failed to Delete Club');
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -176,10 +170,10 @@ export const ClubsPage = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to join club');
-      toast.success(`Welcome to ${clubName}! Your membership has been registered.`, 'Joined Club');
+      alert(`Welcome to ${clubName}! Your membership has been registered.`);
       fetchClubs();
     } catch (err) {
-      toast.error(err.message, 'Membership Notice');
+      alert(`Membership Notice: ${err.message}`);
     } finally {
       setJoiningClubId(null);
     }
@@ -259,21 +253,8 @@ export const ClubsPage = () => {
       {/* Clubs Grid */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="h-64 rounded-2xl relative overflow-hidden theme-card p-6">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div className="w-24 h-5 rounded-full bg-gray-200 animate-pulse" />
-                  <div className="w-16 h-4 rounded bg-gray-200 animate-pulse" />
-                </div>
-                <div className="w-3/4 h-6 rounded bg-gray-200 animate-pulse" />
-                <div className="space-y-2">
-                  <div className="w-full h-3.5 rounded bg-gray-100 animate-pulse" />
-                  <div className="w-5/6 h-3.5 rounded bg-gray-100 animate-pulse" />
-                </div>
-              </div>
-              <div className="absolute inset-0 animate-shimmer" />
-            </div>
+          {[1, 2, 3].map((n) => (
+            <div key={n} className="h-64 rounded-2xl animate-pulse" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
           ))}
         </div>
       ) : error ? (
@@ -378,24 +359,15 @@ export const ClubsPage = () => {
                   <button
                     onClick={() => handleJoinClub(club.id, club.name)}
                     disabled={joiningClubId === club.id}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all hover:opacity-90 btn-press disabled:opacity-60"
+                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all hover:opacity-90"
                     style={{
                       background: 'var(--hero-bg)',
                       color: 'var(--primary)',
                       border: '1px solid var(--border)'
                     }}
                   >
-                    {joiningClubId === club.id ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Joining...</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="w-3.5 h-3.5" />
-                        <span>{isAuthenticated ? 'Join club' : 'Sign in to join'}</span>
-                      </>
-                    )}
+                    <UserPlus className="w-3.5 h-3.5" />
+                    {joiningClubId === club.id ? 'Joining...' : isAuthenticated ? 'Join club' : 'Sign in to join'}
                   </button>
                 </div>
               </div>
