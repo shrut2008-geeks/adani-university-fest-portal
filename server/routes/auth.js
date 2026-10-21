@@ -10,7 +10,7 @@ const router = express.Router();
 // Register new user (students default; admin can register other roles)
 router.post('/register', async (req, res, next) => {
   try {
-    const { email, password, role = 'student' } = req.body;
+   const { email, password } = req.body;   
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required.' });
@@ -24,7 +24,7 @@ router.post('/register', async (req, res, next) => {
     const password_hash = await bcrypt.hash(password, saltRounds);
 
     const result = await query(
-      `INSERT INTO users (email, password_hash, role) 
+      `INSERT INTO users (email, password_hash, role)
        VALUES ($1, $2, $3) 
        RETURNING id, email, role`,
       [email.toLowerCase().trim(), password_hash, assignedRole]

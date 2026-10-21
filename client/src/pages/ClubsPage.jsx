@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/Modal';
 import { 
   Users, 
@@ -12,7 +13,9 @@ import {
   ArrowRight, 
   FolderPlus,
   AlertCircle,
-  UserPlus
+  UserPlus,
+  X,
+  Filter
 } from 'lucide-react';
 
 const pluralMember = (count) => {
@@ -22,12 +25,21 @@ const pluralMember = (count) => {
 
 export const ClubsPage = () => {
   const { user, isRole, token, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [clubs, setClubs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeCategory, setActiveCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+
+  // Initialize from URL search parameters so filters survive refresh
+  const initialCategory = searchParams.get('category') || 'All';
+  const initialSearch = searchParams.get('search') || '';
+
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
 
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -40,21 +52,49 @@ export const ClubsPage = () => {
 
   const categories = ['All', 'Flagship Fest', 'Engineering & Robotics', 'Coding & AI', 'Cultural & Arts'];
 
+  // Debounce search input by 300ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
+  // Sync state changes to URL query parameters
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (activeCategory && activeCategory !== 'All') params.set('category', activeCategory);
+    if (debouncedSearch && debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+
+    setSearchParams(params, { replace: true });
+  }, [activeCategory, debouncedSearch, setSearchParams]);
+
+  // Fetch clubs when activeCategory or debouncedSearch changes
   useEffect(() => {
     fetchClubs();
-  }, [activeCategory, searchQuery]);
+  }, [activeCategory, debouncedSearch]);
+
+  const hasActiveFilters = activeCategory !== 'All' || Boolean(searchInput.trim());
+
+  const handleClearFilters = () => {
+    setActiveCategory('All');
+    setSearchInput('');
+    setDebouncedSearch('');
+    setSearchParams({}, { replace: true });
+  };
 
   const fetchClubs = async () => {
     try {
       setLoading(true);
+      setError(null);
       let url = '/api/clubs?';
       if (activeCategory !== 'All') url += `category=${encodeURIComponent(activeCategory)}&`;
-      if (searchQuery) url += `search=${encodeURIComponent(searchQuery)}&`;
+      if (debouncedSearch && debouncedSearch.trim()) url += `search=${encodeURIComponent(debouncedSearch.trim())}&`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch clubs');
       const data = await res.json();
-      setClubs(data);
+      setClubs(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -95,10 +135,12 @@ export const ClubsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to create club');
 
+      toast.success(`Club "${formData.name}" created successfully!`);
       setIsCreateOpen(false);
       fetchClubs();
     } catch (err) {
       setFormError(err.message);
+      toast.error(err.message);
     } finally {
       setActionLoading(false);
     }
@@ -120,10 +162,12 @@ export const ClubsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update club');
 
+      toast.success('Club updated successfully!');
       setIsEditOpen(false);
       fetchClubs();
     } catch (err) {
       setFormError(err.message);
+      toast.error(err.message);
     } finally {
       setActionLoading(false);
     }
@@ -142,9 +186,10 @@ export const ClubsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to delete club');
 
+      toast.success(`Club "${club.name}" deleted.`);
       fetchClubs();
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      toast.error(err.message || 'Failed to delete club');
     }
   };
 
@@ -170,10 +215,10 @@ export const ClubsPage = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to join club');
-      alert(`Welcome to ${clubName}! Your membership has been registered.`);
+      toast.success(`Welcome to ${clubName}! Your membership has been registered.`);
       fetchClubs();
     } catch (err) {
-      alert(`Membership Notice: ${err.message}`);
+      toast.error(err.message || 'Membership notice');
     } finally {
       setJoiningClubId(null);
     }
@@ -213,20 +258,23 @@ export const ClubsPage = () => {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
+      <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center p-4 rounded-2xl theme-card">
         {/* Category Pills */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs font-bold text-gray-500 mr-1 flex items-center gap-1">
+            <Filter className="w-3.5 h-3.5" /> Category:
+          </span>
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 activeCategory === cat
                   ? 'text-white shadow-sm'
                   : 'hover:opacity-80'
               }`}
               style={{
-                background: activeCategory === cat ? 'var(--primary)' : 'var(--surface)',
+                background: activeCategory === cat ? 'var(--primary)' : 'var(--bg)',
                 color: activeCategory === cat ? '#FFFFFF' : 'var(--text)',
                 border: '1px solid var(--border)'
               }}
@@ -236,17 +284,36 @@ export const ClubsPage = () => {
           ))}
         </div>
 
-        {/* Search Input */}
-        <div className="relative w-full lg:w-72">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
-          <input
-            type="text"
-            placeholder="Search clubs or categories..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl text-sm focus:outline-none"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
-          />
+        {/* Search Input & Clear */}
+        <div className="flex items-center gap-2 w-full lg:w-auto">
+          <div className="relative w-full lg:w-72">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+            <input
+              type="text"
+              placeholder="Search clubs or keywords..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 rounded-xl text-xs focus:outline-none"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors whitespace-nowrap"
+            >
+              <X className="w-3.5 h-3.5" /> Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -264,8 +331,17 @@ export const ClubsPage = () => {
       ) : clubs.length === 0 ? (
         <div className="p-12 text-center rounded-2xl theme-card space-y-3">
           <FolderPlus className="w-12 h-12 mx-auto" style={{ color: 'var(--text-muted)' }} />
-          <p className="font-medium" style={{ color: 'var(--text)' }}>No clubs found matching your criteria</p>
+          <p className="font-medium text-base" style={{ color: 'var(--text)' }}>No clubs found matching your criteria</p>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Try switching categories or clearing search keywords.</p>
+          {hasActiveFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm"
+              style={{ background: 'var(--primary)' }}
+            >
+              Reset Filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -279,7 +355,7 @@ export const ClubsPage = () => {
                 className="flex flex-col justify-between rounded-2xl p-6 theme-card transition-all relative group"
               >
                 <div className="space-y-4">
-                  {/* Category & Member Count (pluralisation handled: 1 member vs 2 members) */}
+                  {/* Category & Member Count */}
                   <div className="flex items-center justify-between text-xs">
                     <span className="px-3 py-1 rounded-full font-semibold border" style={{ background: 'var(--hero-bg)', color: 'var(--primary)', borderColor: 'var(--border)' }}>
                       {club.category || 'General Club'}
@@ -300,7 +376,7 @@ export const ClubsPage = () => {
                     </p>
                   </div>
 
-                  {/* Always render Achievements section so card heights match */}
+                  {/* Achievements section */}
                   <div className="pt-3 border-t border-[var(--border)] min-h-[75px] space-y-1.5">
                     <p className="text-xs font-bold flex items-center gap-1.5" style={{ color: 'var(--primary)' }}>
                       <Trophy className="w-3.5 h-3.5 text-amber-500" />
@@ -355,7 +431,7 @@ export const ClubsPage = () => {
                     )}
                   </div>
 
-                  {/* Join club button: signed in sees 'Join club', guest sees 'Sign in to join' */}
+                  {/* Join club button */}
                   <button
                     onClick={() => handleJoinClub(club.id, club.name)}
                     disabled={joiningClubId === club.id}

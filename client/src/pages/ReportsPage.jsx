@@ -1,9 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { StatusBadge } from '../components/StatusBadge';
 import {
-  BarChart3, Users, IndianRupee, Ticket, Star, Download, ShieldAlert, LogIn,
+  BarChart3, 
+  Users, 
+  IndianRupee, 
+  Ticket, 
+  Star, 
+  Download, 
+  ShieldAlert, 
+  LogIn,
+  FileSpreadsheet,
+  RefreshCw
 } from 'lucide-react';
 
 // Shared fill-percentage (1 decimal, same as EventsPage)
@@ -15,35 +25,67 @@ const fillPct = (registered, capacity) => {
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export const ReportsPage = () => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, token, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const isAdmin = user?.role === 'admin';
 
   const [reports, setReports] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
-  useEffect(() => { if (isAdmin) fetchReports(); else setLoading(false); }, [isAdmin]);
+  useEffect(() => { 
+    if (isAdmin) fetchReports(); 
+    else setLoading(false); 
+  }, [isAdmin]);
 
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const { token } = JSON.parse(localStorage.getItem('au_fest_user') || '{}');
-      const savedToken = localStorage.getItem('au_fest_token');
-      const authToken = token || savedToken;
-
+      setError(null);
       const res = await fetch('/api/reports', {
-        headers: authToken ? { 'Authorization': `Bearer ${authToken}` } : {}
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       if (!res.ok) throw new Error('Failed to load analytical reports');
       setReports(await res.json());
-    } catch (err) { setError(err.message); }
-    finally { setLoading(false); }
+    } catch (err) { 
+      setError(err.message); 
+    } finally { 
+      setLoading(false); 
+    }
+  };
+
+  const handleExportCsv = async () => {
+    try {
+      setExporting(true);
+      const res = await fetch('/api/reports/export', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || 'Failed to export reports CSV');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `au_fest_analytics_report_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Analytics report exported to CSV successfully!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to export CSV report');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount || 0);
 
-  // ── Guard: require admin ─────────────────────────────────────────────────
+  // Guard: require admin
   if (!isAdmin) {
     return (
       <div className="p-12 text-center rounded-2xl space-y-4 max-w-lg mx-auto theme-card mt-12">
@@ -62,7 +104,7 @@ export const ReportsPage = () => {
     );
   }
 
-  // ── Loading skeleton ─────────────────────────────────────────────────────
+  // Loading skeleton
   if (loading) return (
     <div className="space-y-8 pb-16">
       <div className="h-12 w-64 animate-pulse rounded-xl" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }} />
@@ -99,13 +141,35 @@ export const ReportsPage = () => {
             Memberships, budgets, registrations and ratings at a glance
           </p>
         </div>
-        <button onClick={() => window.print()}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors self-start sm:self-auto"
-          style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
-        >
-          <Download className="w-4 h-4" style={{ color: 'var(--primary)' }} />
-          Export / Print
-        </button>
+
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          <button
+            onClick={handleExportCsv}
+            disabled={exporting}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm disabled:opacity-50 hover:opacity-95"
+            style={{ background: 'var(--primary)', color: '#FFFFFF' }}
+          >
+            {exporting ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Exporting...</span>
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Export CSV</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-colors"
+            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+          >
+            <Download className="w-4 h-4" style={{ color: 'var(--primary)' }} />
+            Print
+          </button>
+        </div>
       </div>
 
       {/* 2×2 Grid */}

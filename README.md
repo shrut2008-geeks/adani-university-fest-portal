@@ -1,197 +1,162 @@
-# 🚀 AU Fest — Adani University Fest & Club Management Portal
+# 🏛️ AU Fest — Adani University Club & Event Portal
 
-A collegiate events and club management platform tailored for **"AU Fest"**, Adani University's annual tech and cultural fest. Built with a production-grade **Node.js + Express + PostgreSQL (pg)** backend and a **React (Vite) + Tailwind CSS** frontend.
-
----
-
-## 🌌 Features Overview
-
-- **Executive Fest Dashboard**: Real-time aggregate statistics for active clubs, committee members, fest events, and verified corporate sponsorships received.
-- **Club Directory & Achievements**: Explore student societies and flagship fest committees with member counts, category filters, and recognized awards.
-- **Committee & Membership Management**: Role-based access control with positions (*President*, *Vice-President*, *Member*).
-- **Events & Zero-Gravity Schedule**: Comprehensive schedule with live venue capacity indicators, status badges (*Planned*, *Ongoing*, *Completed*), and date filters.
-- **Event Dossier & Live Attendance**: Check-in mechanism with one-click attended status toggling for organizers.
-- **Capacity-Aware Registrations**: Student registrations with duplicate-prevention and venue seat limits.
-- **Sponsors & Payment Ledger**: Manage corporate sponsors, record funding disbursements (including University internal disbursements where `sponsor_id` is `NULL`), and track approval states (*Pending*, *Approved*, *Rejected*).
-- **Attendee-Verified Feedback**: Rate events 1-5 stars with comments, strictly verified against recorded event attendance.
-- **Fest Intelligence & GROUP BY Analytics**: Dedicated reports dashboard executing aggregate SQL queries for club memberships, total budgets, registration capacity fill rates, and average satisfaction ratings.
+**AU Fest** is the comprehensive event scheduling, club directory, student ticketing, and fest intelligence portal designed for **Adani University**. The platform manages student chapters, flagship committees, venue capacity limits, real-time ticket issuance, check-in rosters, attendance-verified reviews, and institutional analytics.
 
 ---
 
-## 🛠️ Technology Stack
+## 🛠️ Tech Stack
 
-| Layer | Technologies |
-| :--- | :--- |
-| **Backend** | Node.js (v18+ / v24+), Express.js, `pg` (PostgreSQL Connection Pool), JWT, `bcryptjs`, CORS, Dotenv |
-| **Frontend** | React 18, Vite 5, Tailwind CSS 3, Lucide Icons, React Router v6 |
-| **Database** | PostgreSQL with native identity columns (`INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY`) |
-| **Security** | Role-based authorization (`admin`, `club_admin`, `student`), parameterized queries (`$1, $2`), token expiration |
+- **Frontend**: React 18, Vite 5, Tailwind CSS 3, Lucide React icons, React Router v6.
+- **Backend**: Node.js, Express.js, PostgreSQL client (`pg` connection pool), JSON Web Tokens (JWT), bcryptjs, CORS.
+- **Database**: Serverless PostgreSQL (Neon).
+- **Deployment**:
+  - **Frontend**: Hosted on [Vercel](https://vercel.com/)
+  - **Backend**: Hosted as a Web Service on [Render](https://render.com/)
+  - **Database**: Managed on [Neon](https://neon.tech/)
 
 ---
 
-## 📁 Project Architecture
+## 📐 Architecture
 
-```
-adani-university-fest-portal/
-├── server/
-│   ├── db/
-│   │   ├── index.js          # PostgreSQL Connection Pool & query helper
-│   │   ├── schema.sql        # Exact DDL schema with IDENTITY PKs & FKs
-│   │   ├── seed.sql          # Seed data with hashed passwords & fest records
-│   │   └── seedRunner.js     # Node runner to initialize DB tables & data
-│   ├── middleware/
-│   │   ├── auth.js           # JWT verification & role authorization
-│   │   └── errorHandler.js   # Centralized error handler (23503, 23505, 23514)
-│   ├── routes/
-│   │   ├── auth.js           # Login, register, current user profile
-│   │   ├── dashboard.js      # Key fest statistics & live highlights
-│   │   ├── clubs.js          # Club CRUD, categories, achievements
-│   │   ├── members.js        # Club roster & executive positions
-│   │   ├── events.js         # Event scheduling, venue joins, details
-│   │   ├── venues.js         # Fest venues & capacities
-│   │   ├── registrations.js  # Capacity-checked registrations & check-in
-│   │   ├── organisers.js     # Event organising committee roles
-│   │   ├── sponsors.js       # Sponsors & payment ledger
-│   │   ├── feedback.js       # Attendance-gated reviews & ratings
-│   │   └── reports.js        # GROUP BY analytical queries
-│   ├── .env                  # Backend environment variables
-│   ├── .env.example          # Template environment file
-│   ├── index.js              # Express app bootstrap & route registration
-│   └── package.json          # Server dependencies
-│
-├── client/
-│   ├── public/
-│   │   ├── logo.png          # Official Adani University / AU Fest logo
-│   │   └── favicon.svg       # Fest favicon
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx          # Persistent navbar with dedicated logo.png
-│   │   │   ├── StatCard.jsx        # Big bold metric cards with glows
-│   │   │   ├── StatusBadge.jsx     # Color-coded badge pills
-│   │   │   └── Modal.jsx           # Dark glassmorphic modal dialog
-│   │   ├── context/
-│   │   │   └── AuthContext.jsx     # JWT authentication & session state
-│   │   ├── pages/
-│   │   │   ├── DashboardPage.jsx   # Fest stats & upcoming spotlight
-│   │   │   ├── ClubsPage.jsx       # Club directory & category filters
-│   │   │   ├── ClubDetailPage.jsx  # Member roster & achievements
-│   │   │   ├── EventsPage.jsx      # Events schedule & filters
-│   │   │   ├── EventDetailPage.jsx # Check-ins, organisers, budget, reviews
-│   │   │   ├── RegistrationsPage.jsx # Student passes & check-in roster
-│   │   │   ├── SponsorsPage.jsx    # Corporate partners & ledger
-│   │   │   ├── ReportsPage.jsx     # GROUP BY Intelligence analytics
-│   │   │   └── LoginPage.jsx       # Space-age sign in with 1-click demo fill
-│   │   ├── App.jsx                 # Routes & layout shell
-│   │   ├── index.css               # Tailwind directives & zero-gravity effects
-│   │   └── main.jsx                # React DOM entry
-│   ├── index.html                  # HTML entry with Space Grotesk & Inter fonts
-│   ├── tailwind.config.js          # Adani university official color tokens
-│   ├── vite.config.js              # Vite server & API proxy config
-│   ├── .env                        # Frontend environment variables
-│   └── package.json                # Frontend dependencies
-│
-└── README.md                       # Comprehensive guide & documentation
+```mermaid
+flowchart LR
+    Client["Client (React / Vite on Vercel)"] -->|HTTPS REST API / JWT| Server["Backend (Express.js on Render)"]
+    Server -->|TLS Encrypted Connection Pool| DB[("Database (PostgreSQL on Neon)")]
+    Server -.->|Async Non-blocking Alerts| Telegram["Telegram Alerts API (5s Timeout)"]
 ```
 
----
-
-## 🚀 Quick Setup & Installation Guide
-
-### Step 1: Create the PostgreSQL Database
-Make sure PostgreSQL is running on your machine (default port `5432`). In your PostgreSQL client (e.g. `psql`, pgAdmin, or terminal):
-
-```sql
-CREATE DATABASE au_fest;
-```
+1. **Client (Vercel)**: Translucent, responsive SPA adhering to the Adani University purple brand system (`#74186E`), supporting dark/light mode, accessible modals, and URL-synchronized search filters.
+2. **Backend (Render)**: Express REST API enforcing role-based access control, strict parameterized queries (`$1, $2, ...`), formula injection-safe CSV exports, and asynchronous 5-second timeout Telegram notifications.
+3. **Database (Neon)**: Relational PostgreSQL schema with relational integrity constraints (`ON DELETE CASCADE / SET NULL`), venue seat limits, and attendance tracking.
 
 ---
 
-### Step 2: Configure Environment Variables
+## 📸 Screenshots
 
-#### Backend (`server/.env`)
-Create `server/.env` based on `server/.env.example`:
-```env
-PORT=5000
-DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/au_fest
-JWT_SECRET=your_super_secret_jwt_key_here
-ALLOWED_ORIGIN=http://localhost:3000
-ADMIN_SEED_PASSWORD=YOUR_ADMIN_PASSWORD
-CLUBADMIN_SEED_PASSWORD=YOUR_CLUBADMIN_PASSWORD
-```
-*(Replace `postgres:YOUR_PASSWORD` with your PostgreSQL username and password. Set `ADMIN_SEED_PASSWORD` and `CLUBADMIN_SEED_PASSWORD` to your chosen administrative passwords).*
+<!-- Placeholders for visual reference -->
+| Dashboard Overview | Event Schedule & Capacity |
+| :---: | :---: |
+| ![Dashboard](docs/screenshots/dashboard.png) | ![Events Schedule](docs/screenshots/events.png) |
 
-#### Frontend (`client/.env`)
-Create or edit `client/.env`:
-```env
-VITE_API_URL=/api
-```
+| Student Event Passes & Roster | Fest Intelligence & Analytics |
+| :---: | :---: |
+| ![My Registrations](docs/screenshots/my_registrations.png) | ![Analytics Reports](docs/screenshots/analytics.png) |
 
 ---
 
-### Step 3: Run Database Schema and Seed Data
-Navigate to the `server/` directory and run:
+## 👥 Roles & Permissions Matrix
 
-```bash
+All user roles are strictly derived from verified JWT tokens or database lookups; user role is **never** accepted from request bodies.
+
+| Feature / Action | Student | Club Admin | Admin |
+| :--- | :---: | :---: | :---: |
+| Browse clubs, events, venues & ratings | ✅ | ✅ | ✅ |
+| Register for events & reserve seat | ✅ | ✅ | ✅ |
+| View own passes (`/my-registrations`) | ✅ | ✅ | ✅ |
+| Cancel own registration (before event starts) | ✅ | ✅ | ✅ (Any time) |
+| Submit event feedback (attendance-verified) | ✅ | ✅ | ✅ |
+| Create / Edit / Delete events for assigned club | ❌ | ✅ | ✅ (All clubs) |
+| Manage club details & achievements | ❌ | ✅ (Own club) | ✅ (All clubs) |
+| Toggle attendee check-in (`Mark Attended`) | ❌ | ✅ (Own events) | ✅ (All events) |
+| View full attendance roster (`/registrations`) | ❌ | ✅ | ✅ |
+| Access fest intelligence reports (`/reports`) | ❌ | ❌ | ✅ |
+| Export registrations roster as CSV | ❌ | ❌ | ✅ |
+| Export analytics report as CSV | ❌ | ❌ | ✅ |
+| Manage corporate sponsors & payment ledger | ❌ | ❌ | ✅ |
+
+---
+
+## ⚙️ Environment Variables
+
+> [!IMPORTANT]
+> Never commit actual secret keys, database credentials, or API tokens to source control. Refer to `server/.env.example` for template placeholders.
+
+### Frontend (`client/.env`)
+- `VITE_API_URL`: Base URL for the Express backend on Render (e.g. `https://au-fest-api.onrender.com` in production; omitted in local development to use the Vite dev proxy).
+
+### Backend (`server/.env`)
+- `PORT`: Port on which the Express server listens (defaults to `5000`).
+- `DATABASE_URL`: Full PostgreSQL connection string with SSL configuration (e.g. `postgresql://user:password@ep-...neon.tech/neondb?sslmode=require`).
+- `JWT_SECRET`: High-entropy secret key used to sign and verify JSON Web Tokens.
+- `ALLOWED_ORIGIN`: Comma-separated list of allowed CORS origins (e.g. `http://localhost:5173,https://your-frontend.vercel.app`).
+- `TELEGRAM_BOT_TOKEN`: Telegram bot token for real-time dispatch alerts.
+- `TELEGRAM_CHAT_ID`: Target Telegram channel or chat ID.
+
+---
+
+## 💻 Local Setup & Development (Windows)
+
+### Prerequisites
+- **Node.js** (v18.x or v20+ / v24+)
+- **Git for Windows**
+- **npm** (bundled with Node.js)
+
+### 1. Clone the Repository
+```powershell
+git clone https://github.com/your-username/adani-university-fest-portal.git
+cd adani-university-fest-portal
+```
+
+### 2. Install Server Dependencies
+```powershell
 cd server
 npm install
-npm run seed
+cd ..
 ```
 
-This will automatically execute `server/db/schema.sql` (creating all 11 tables with proper foreign keys and constraints) followed by `server/db/seed.sql` (populating clubs, venues, fest events, sponsorships, and demo accounts). The seed runner dynamically hashes the `ADMIN_SEED_PASSWORD` and `CLUBADMIN_SEED_PASSWORD` configured in `server/.env`.
-
-#### Default Pre-Configured Accounts:
-- **Admin**: `admin@adani.ac.in` (Password set by the person installing the project in `server/.env` via `ADMIN_SEED_PASSWORD`)
-- **Club Admin**: `clubadmin@adani.ac.in` (Password set by the person installing the project in `server/.env` via `CLUBADMIN_SEED_PASSWORD`)
-- **Student**: `student@adani.ac.in` (Password: `adani123` — low-privilege demo account that cannot reach Reports, sponsorship payment amounts, or admin actions)
-
-> **Note on Security:** Admin and Club Admin passwords are set by the person who installs the project in `server/.env`. They are hashed using bcrypt when running `npm run seed` and are never stored or exposed in the frontend code.
-
----
-
-### Step 4: Run the Backend API Server
-Inside the `server/` directory:
-
-```bash
-npm start
-```
-*The server will start at `http://localhost:5000`. Test the health endpoint at `http://localhost:5000/api/health`.*
-
----
-
-### Step 5: Run the Frontend (React + Vite)
-In a new terminal window, navigate to `client/`:
-
-```bash
+### 3. Install Client Dependencies
+```powershell
 cd client
 npm install
+cd ..
+```
+
+### 4. Running the Application
+> [!CAUTION]
+> **Safety Rule**: If your local `server/.env` points to the **LIVE Neon Production Database**, **NEVER** run `npm run seed`, `seedRunner.js`, or any schema-altering script locally.
+>
+> To work on the frontend with the deployed backend or live API:
+```powershell
+cd client
 npm run dev
 ```
-*The React app will launch at `http://localhost:3000` (or `http://localhost:5173`).*
+The Vite development server will start at `http://localhost:5173`.
+
+### 5. Running Code Verification Locally
+Verify syntax and production bundle without touching the database:
+```powershell
+# Verify backend files syntax
+node --check server/notify.js
+node --check server/routes/registrations.js
+node --check server/routes/events.js
+node --check server/routes/reports.js
+
+# Build client production bundle
+cd client
+npm run build
+```
 
 ---
 
-## 🛡️ Business Rules & Access Control Matrix
+## 🗄️ Database Migrations
 
-| Action | Admin | Club Admin | Student |
-| :--- | :---: | :---: | :---: |
-| View Fest Dashboard, Events, Clubs | ✅ | ✅ | ✅ |
-| View Analytical Reports (`/reports`) | ✅ | ❌ | ❌ |
-| View Sponsorship Payments & Ledger Amounts | ✅ | ❌ | ❌ |
-| Register for Available Events | ✅ | ✅ | ✅ |
-| Submit Event Feedback (if attended) | ✅ | ✅ | ✅ |
-| Create / Edit Events | ✅ | ✅ (Own Club Only) | ❌ |
-| Manage Club Members & Positions | ✅ | ✅ (Own Club Only) | ❌ |
-| Toggle Registration Attendance (Check-in) | ✅ | ✅ (Own Club Events) | ❌ |
-| Delete Clubs / Venues | ✅ | ❌ | ❌ |
+All database schema evolutions must be non-destructive:
+1. Schema modifications are written into numbered migration scripts under `server/db/migrations/` (e.g. `001_create_example.sql`).
+2. Migrations must **never DROP or DELETE** existing tables or live production data.
+3. **Execution**:
+   - Log in to the [Neon Console](https://console.neon.tech/).
+   - Open the **SQL Editor** for the target database branch.
+   - Paste and execute the SQL migration script manually.
+   - Verify index creation and table constraints before deploying updated application code.
 
 ---
 
-## 🎨 AU Fest UI Design Guide
+## ⚠️ Known Limitations & Deployment Notes
 
-The UI is built according to the official **AU Fest & Adani Branding Design Language**, combining high-tech clean aesthetics with official university corporate identity.
-
----
-
-## 🎓 About AU Fest
-
-**AU Fest** is Adani University's annual flagship fest uniting engineering, artificial intelligence, cultural arts, robotics, and entrepreneurship. Hosted annually at the Shantigram campus, Ahmedabad.
+1. **Render Free-Tier Spin Down**:
+   - The backend is deployed on Render's free tier, which enters a sleep state after **15 minutes of inactivity**.
+   - The first HTTP request after a sleep period incurs a **30 to 50 second cold start** delay while the container spins up. The frontend includes automatic retry and loading states to handle this smoothly.
+2. **Neon Serverless Suspension**:
+   - Neon serverless PostgreSQL suspends compute instances after inactivity. First queries after suspension may experience a transient latency spike of 1–2 seconds.
+3. **CSV Export Formula Injection Neutralization**:
+   - All exported CSV cells starting with `=, +, -, @, \t, \r` are automatically prefixed with a single quote (`'`) to protect spreadsheet applications against formula execution exploits. Export files are encoded with UTF-8 BOM (`\uFEFF`) for immediate rendering in Microsoft Excel.

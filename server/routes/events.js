@@ -9,7 +9,19 @@ const VALID_STATUSES = ['Planned', 'Ongoing', 'Completed'];
 // GET all events with JOINs for club name, venue name, and capacity
 router.get('/', async (req, res, next) => {
   try {
-    const { status, date, club_id, search } = req.query;
+    const { 
+      status, 
+      date, 
+      startDate, 
+      start_date, 
+      endDate, 
+      end_date, 
+      club_id, 
+      venue_id, 
+      search,
+      limit = 100,
+      page = 1
+    } = req.query;
 
     let sql = `
       SELECT 
@@ -42,8 +54,19 @@ router.get('/', async (req, res, next) => {
     }
 
     if (club_id && club_id !== 'All') {
-      params.push(club_id);
-      sql += ` AND e.club_id = $${params.length}`;
+      const parsedClubId = parseInt(club_id, 10);
+      if (!isNaN(parsedClubId)) {
+        params.push(parsedClubId);
+        sql += ` AND e.club_id = $${params.length}`;
+      }
+    }
+
+    if (venue_id && venue_id !== 'All') {
+      const parsedVenueId = parseInt(venue_id, 10);
+      if (!isNaN(parsedVenueId)) {
+        params.push(parsedVenueId);
+        sql += ` AND e.venue_id = $${params.length}`;
+      }
     }
 
     if (date) {
@@ -51,15 +74,40 @@ router.get('/', async (req, res, next) => {
       sql += ` AND DATE(e.date) = DATE($${params.length})`;
     }
 
-    if (search) {
+    const effectiveStartDate = startDate || start_date;
+    if (effectiveStartDate) {
+      params.push(effectiveStartDate);
+      sql += ` AND e.date >= $${params.length}`;
+    }
+
+    const effectiveEndDate = endDate || end_date;
+    if (effectiveEndDate) {
+      params.push(effectiveEndDate);
+      sql += ` AND e.date <= $${params.length}`;
+    }
+
+    if (search && search.trim()) {
       params.push(`%${search.trim()}%`);
-      sql += ` AND (e.title ILIKE $${params.length} OR c.name ILIKE $${params.length})`;
+      sql += ` AND (e.title ILIKE $${params.length} OR c.name ILIKE $${params.length} OR COALESCE(v.name, '') ILIKE $${params.length})`;
     }
 
     sql += `
       GROUP BY e.id, e.club_id, e.venue_id, e.title, e.date, e.status, c.name, c.category, v.name, v.capacity
       ORDER BY e.date ASC
     `;
+
+    // Sensible limit & offset pagination with maximum 100 to protect server resources
+    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 100);
+    const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
+    const offset = (parsedPage - 1) * parsedLimit;
+
+    params.push(parsedLimit);
+    sql += ` LIMIT $${params.length}`;
+
+    if (offset > 0) {
+      params.push(offset);
+      sql += ` OFFSET $${params.length}`;
+    }
 
     const result = await query(sql, params);
     return res.json(result.rows);

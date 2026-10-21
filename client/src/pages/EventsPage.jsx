@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
 import { 
@@ -13,7 +14,9 @@ import {
   Trash2, 
   Ticket, 
   ArrowRight,
-  AlertCircle
+  AlertCircle,
+  X,
+  Filter
 } from 'lucide-react';
 
 // Shared fill percentage function: 1 decimal place (e.g. 0.4%)
@@ -24,17 +27,29 @@ export const fillPct = (registered, capacity) => {
 
 export const EventsPage = () => {
   const { user, isRole, token, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [events, setEvents] = useState([]);
   const [clubs, setClubs] = useState([]);
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Filters
-  const [statusFilter, setStatusFilter] = useState('All');
-  const [dateFilter, setDateFilter] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  // Initialize filters from URL query parameters so they survive refresh
+  const initialStatus = searchParams.get('status') || 'All';
+  const initialClubId = searchParams.get('club_id') || 'All';
+  const initialVenueId = searchParams.get('venue_id') || 'All';
+  const initialDate = searchParams.get('date') || '';
+  const initialSearch = searchParams.get('search') || '';
+
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [clubFilter, setClubFilter] = useState(initialClubId);
+  const [venueFilter, setVenueFilter] = useState(initialVenueId);
+  const [dateFilter, setDateFilter] = useState(initialDate);
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
 
   // Modals state
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -55,26 +70,67 @@ export const EventsPage = () => {
 
   const statuses = ['All', 'Planned', 'Ongoing', 'Completed'];
 
+  // Debounce search input by 300ms
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchInput);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchInput]);
+
+  // Sync state changes into URL searchParams
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (statusFilter && statusFilter !== 'All') params.set('status', statusFilter);
+    if (clubFilter && clubFilter !== 'All') params.set('club_id', clubFilter);
+    if (venueFilter && venueFilter !== 'All') params.set('venue_id', venueFilter);
+    if (dateFilter) params.set('date', dateFilter);
+    if (debouncedSearch && debouncedSearch.trim()) params.set('search', debouncedSearch.trim());
+
+    setSearchParams(params, { replace: true });
+  }, [statusFilter, clubFilter, venueFilter, dateFilter, debouncedSearch, setSearchParams]);
+
+  // Fetch events when active filters change
   useEffect(() => {
     fetchEvents();
-  }, [statusFilter, dateFilter, searchQuery]);
+  }, [statusFilter, clubFilter, venueFilter, dateFilter, debouncedSearch]);
 
   useEffect(() => {
     fetchMetadata();
   }, []);
 
+  const hasActiveFilters = 
+    statusFilter !== 'All' || 
+    clubFilter !== 'All' || 
+    venueFilter !== 'All' || 
+    Boolean(dateFilter) || 
+    Boolean(searchInput.trim());
+
+  const handleClearFilters = () => {
+    setStatusFilter('All');
+    setClubFilter('All');
+    setVenueFilter('All');
+    setDateFilter('');
+    setSearchInput('');
+    setDebouncedSearch('');
+    setSearchParams({}, { replace: true });
+  };
+
   const fetchEvents = async () => {
     try {
       setLoading(true);
+      setError(null);
       let url = '/api/events?';
       if (statusFilter !== 'All') url += `status=${encodeURIComponent(statusFilter)}&`;
+      if (clubFilter !== 'All') url += `club_id=${encodeURIComponent(clubFilter)}&`;
+      if (venueFilter !== 'All') url += `venue_id=${encodeURIComponent(venueFilter)}&`;
       if (dateFilter) url += `date=${encodeURIComponent(dateFilter)}&`;
-      if (searchQuery) url += `search=${encodeURIComponent(searchQuery)}&`;
+      if (debouncedSearch && debouncedSearch.trim()) url += `search=${encodeURIComponent(debouncedSearch.trim())}&`;
 
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch events');
       const data = await res.json();
-      setEvents(data);
+      setEvents(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -145,10 +201,12 @@ export const EventsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to create event');
 
+      toast.success(`Event "${formData.title}" created successfully!`);
       setIsCreateOpen(false);
       fetchEvents();
     } catch (err) {
       setFormError(err.message);
+      toast.error(err.message);
     } finally {
       setActionLoading(false);
     }
@@ -176,10 +234,12 @@ export const EventsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to update event');
 
+      toast.success('Event updated successfully!');
       setIsEditOpen(false);
       fetchEvents();
     } catch (err) {
       setFormError(err.message);
+      toast.error(err.message);
     } finally {
       setActionLoading(false);
     }
@@ -196,9 +256,10 @@ export const EventsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Failed to delete event');
 
+      toast.success(`Event "${evt.title}" deleted.`);
       fetchEvents();
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      toast.error(err.message || 'Failed to delete event');
     }
   };
 
@@ -220,10 +281,10 @@ export const EventsPage = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
-      alert(data.message || 'Successfully registered for event!');
+      toast.success(data.message || 'Successfully registered for event! Pass issued.');
       fetchEvents();
     } catch (err) {
-      alert(`Registration Error: ${err.message}`);
+      toast.error(err.message || 'Registration error');
     } finally {
       setRegisteringId(null);
     }
@@ -262,60 +323,111 @@ export const EventsPage = () => {
         )}
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between p-4 rounded-2xl theme-card">
-        {/* Status Pills */}
-        <div className="flex flex-wrap gap-2">
-          {statuses.map((st) => (
-            <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                statusFilter === st
-                  ? 'text-white shadow-sm'
-                  : 'hover:opacity-80'
-              }`}
-              style={{
-                background: statusFilter === st ? 'var(--primary)' : 'var(--bg)',
-                color: statusFilter === st ? '#FFFFFF' : 'var(--text)',
-                border: '1px solid var(--border)'
-              }}
-            >
-              {st}
-            </button>
-          ))}
-        </div>
+      {/* Comprehensive Filter Bar with debounced search & clear filters */}
+      <div className="p-4 rounded-2xl theme-card space-y-4">
+        <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center justify-between">
+          {/* Status Pills */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-gray-500 mr-1 flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5" /> Status:
+            </span>
+            {statuses.map((st) => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all ${
+                  statusFilter === st
+                    ? 'text-white shadow-sm'
+                    : 'hover:opacity-80'
+                }`}
+                style={{
+                  background: statusFilter === st ? 'var(--primary)' : 'var(--bg)',
+                  color: statusFilter === st ? '#FFFFFF' : 'var(--text)',
+                  border: '1px solid var(--border)'
+                }}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
 
-        {/* Date & Search Inputs */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-xl text-xs focus:outline-none"
-            style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
-          />
-          {dateFilter && (
-            <button
-              onClick={() => setDateFilter('')}
-              className="text-xs hover:underline self-center"
-              style={{ color: 'var(--text-muted)' }}
-            >
-              Clear
-            </button>
-          )}
-
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+          {/* Search Input (Debounced) */}
+          <div className="relative w-full md:w-72">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
             <input
               type="text"
-              placeholder="Search title or club..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1.5 rounded-xl text-xs focus:outline-none w-full sm:w-56"
+              placeholder="Search title, club, or venue..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-9 pr-8 py-2 rounded-xl text-xs focus:outline-none w-full"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            />
+            {searchInput && (
+              <button
+                onClick={() => setSearchInput('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-full hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Second Row: Club, Venue, Date selection & Clear Filters */}
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[var(--border)]">
+          {/* Club Filter */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <label className="text-gray-500 font-medium">Club:</label>
+            <select
+              value={clubFilter}
+              onChange={(e) => setClubFilter(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl text-xs focus:outline-none"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            >
+              <option value="All">All Clubs</option>
+              {clubs.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Venue Filter */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <label className="text-gray-500 font-medium">Venue:</label>
+            <select
+              value={venueFilter}
+              onChange={(e) => setVenueFilter(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl text-xs focus:outline-none"
+              style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
+            >
+              <option value="All">All Venues</option>
+              {venues.map((v) => (
+                <option key={v.id} value={v.id}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Date Picker */}
+          <div className="flex items-center gap-1.5 text-xs">
+            <label className="text-gray-500 font-medium">Date:</label>
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl text-xs focus:outline-none"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--text)' }}
             />
           </div>
+
+          {/* Clear Filters Button */}
+          {hasActiveFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors ml-auto"
+            >
+              <X className="w-3.5 h-3.5" /> Clear Filters
+            </button>
+          )}
         </div>
       </div>
 
@@ -333,8 +445,19 @@ export const EventsPage = () => {
       ) : events.length === 0 ? (
         <div className="p-12 text-center rounded-2xl theme-card space-y-3">
           <Calendar className="w-12 h-12 mx-auto" style={{ color: 'var(--text-muted)' }} />
-          <p className="font-medium" style={{ color: 'var(--text)' }}>No events found</p>
-          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Try adjusting your filters or date selection.</p>
+          <p className="font-medium text-base" style={{ color: 'var(--text)' }}>No events match your search or filters</p>
+          <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+            Try adjusting your search terms, date range, or selected venue.
+          </p>
+          {hasActiveFilters && (
+            <button
+              onClick={handleClearFilters}
+              className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white shadow-sm"
+              style={{ background: 'var(--primary)' }}
+            >
+              Reset All Filters
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -350,7 +473,7 @@ export const EventsPage = () => {
                 className="flex flex-col justify-between rounded-2xl p-6 theme-card transition-all relative group"
               >
                 <div className="space-y-4">
-                  {/* Status & Rating: If no reviews, muted grey with NO star icon */}
+                  {/* Status & Rating */}
                   <div className="flex items-center justify-between">
                     <StatusBadge status={evt.status} />
                     {hasReviews ? (
@@ -375,7 +498,7 @@ export const EventsPage = () => {
                     </h3>
                   </div>
 
-                  {/* Date & Venue Info (Removed duplicate Capacity line) */}
+                  {/* Date & Venue Info */}
                   <div className="space-y-2 text-xs p-3 rounded-xl border border-[var(--border)]" style={{ background: 'var(--hero-bg)', color: 'var(--text)' }}>
                     <div className="flex items-center gap-2">
                       <Clock className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
@@ -387,7 +510,7 @@ export const EventsPage = () => {
                     </div>
                   </div>
 
-                  {/* Registrations Progress Bar: format "2 / 500 registered", 1 decimal place percentage */}
+                  {/* Registrations Progress Bar */}
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="flex items-center gap-1 font-medium" style={{ color: 'var(--text)' }}>

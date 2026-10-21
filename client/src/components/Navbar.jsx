@@ -20,12 +20,12 @@ export const Navbar = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Requirement: Menu: Dashboard, Clubs, Events, Registrations, Reports, all on one line.
+  // Requirement: Menu: Dashboard, Clubs, Events, Registrations (or My Registrations), Reports
   const navLinks = [
     { name: 'Dashboard', path: '/', icon: Home },
     { name: 'Clubs', path: '/clubs', icon: Users },
     { name: 'Events', path: '/events', icon: Calendar },
-    { name: 'Registrations', path: '/registrations', icon: Ticket },
+    { name: (isAuthenticated && user?.role === 'student') ? 'My Registrations' : 'Registrations', path: '/registrations', icon: Ticket },
     { name: 'Reports', path: '/reports', icon: BarChart3 },
   ];
 
@@ -41,7 +41,7 @@ export const Navbar = () => {
           
           {/* Left: Logo & University Title (flex-shrink-0 and whitespace-nowrap so never overlapped) */}
           <div className="flex items-center flex-shrink-0 whitespace-nowrap mr-3 xl:mr-6">
-            <Link to="/" className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] rounded-xl">
               <img 
                 src="/logo.png" 
                 alt="Adani University Logo" 
@@ -72,7 +72,7 @@ export const Navbar = () => {
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] ${
                     active 
                       ? 'bg-[var(--hero-bg)]' 
                       : 'hover:bg-[var(--hero-bg)]'
@@ -95,7 +95,7 @@ export const Navbar = () => {
               href="https://www.adaniuni.ac.in/"
               target="_blank"
               rel="noreferrer"
-              className="text-xs hover:underline font-medium transition-colors inline-flex items-center gap-1"
+              className="text-xs hover:underline font-medium transition-colors inline-flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] rounded-lg px-1.5 py-1"
               style={{ color: 'var(--text-muted)' }}
             >
               adaniuni.ac.in
@@ -113,7 +113,7 @@ export const Navbar = () => {
                 <button
                   onClick={logout}
                   title="Sign Out"
-                  className="p-2 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                  className="p-2 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -122,7 +122,7 @@ export const Navbar = () => {
               /* One main button on the right */
               <Link
                 to="/login"
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition-all hover:opacity-95"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold text-white shadow-sm transition-all hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
                 style={{ background: 'var(--primary)' }}
               >
                 <LogIn className="w-4 h-4" />
@@ -135,7 +135,7 @@ export const Navbar = () => {
           <div className="flex min-[1100px]:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -155,7 +155,7 @@ export const Navbar = () => {
                 key={item.path}
                 to={item.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold ${
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] ${
                   active 
                     ? 'bg-[var(--hero-bg)]' 
                     : 'hover:bg-[var(--hero-bg)]'
@@ -175,10 +175,10 @@ export const Navbar = () => {
               href="https://www.adaniuni.ac.in/"
               target="_blank"
               rel="noreferrer"
-              className="text-xs font-medium flex items-center gap-1 px-3 py-1"
-              style={{ color: 'var(--text-muted)' }}
+              className="text-xs font-medium flex items-center gap-1 px-3 py-1 text-gray-600 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
             >
-              adani.ac.in ↗
+              adaniuni.ac.in
+              <ExternalLink className="w-3 h-3" />
             </a>
 
             {isAuthenticated ? (
@@ -195,7 +195,7 @@ export const Navbar = () => {
                     logout();
                     setMobileMenuOpen(false);
                   }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   Sign Out
@@ -205,7 +205,7 @@ export const Navbar = () => {
               <Link
                 to="/login"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]"
                 style={{ background: 'var(--primary)' }}
               >
                 <LogIn className="w-4 h-4" />

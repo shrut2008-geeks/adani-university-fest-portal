@@ -4,10 +4,10 @@ const { verifyToken, requireRoles, isClubAdminForClub } = require('../middleware
 
 const router = express.Router();
 
-// GET all clubs with member count and achievements, category filter
+// GET all clubs with member count and achievements, category and search filter with sensible limits
 router.get('/', async (req, res, next) => {
   try {
-    const { category, search } = req.query;
+    const { category, search, limit = 100, page = 1 } = req.query;
     let sql = `
       SELECT 
         c.id, 
@@ -33,12 +33,24 @@ router.get('/', async (req, res, next) => {
       sql += ` AND c.category = $${params.length}`;
     }
 
-    if (search) {
+    if (search && search.trim()) {
       params.push(`%${search.trim()}%`);
       sql += ` AND (c.name ILIKE $${params.length} OR c.description ILIKE $${params.length})`;
     }
 
     sql += ` GROUP BY c.id, c.name, c.category, c.description ORDER BY c.id ASC`;
+
+    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 100, 1), 100);
+    const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
+    const offset = (parsedPage - 1) * parsedLimit;
+
+    params.push(parsedLimit);
+    sql += ` LIMIT $${params.length}`;
+
+    if (offset > 0) {
+      params.push(offset);
+      sql += ` OFFSET $${params.length}`;
+    }
 
     const result = await query(sql, params);
     return res.json(result.rows);
