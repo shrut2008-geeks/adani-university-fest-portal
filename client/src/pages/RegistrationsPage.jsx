@@ -231,7 +231,8 @@ export const RegistrationsPage = () => {
         </div>
 
         <div className="flex items-center gap-3 self-start sm:self-auto">
-          {(isRole('admin') || isRole('club_admin')) && (
+          {/* Gate Scanner tool: Strictly for Admin account only */}
+          {!isMyView && isRole('admin') && (
             <button
               onClick={() => setIsGateScannerOpen(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white shadow-sm transition-all hover:opacity-95"
@@ -271,6 +272,41 @@ export const RegistrationsPage = () => {
           </Link>
         </div>
       </div>
+
+      {/* Admin Registration Counters: How many students registered */}
+      {!isMyView && isRole('admin') && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-1">
+            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+              Total Students Registered
+            </span>
+            <div className="text-2xl sm:text-3xl font-black text-gray-900 font-sans">
+              {filteredRegistrations.length}
+            </div>
+            <p className="text-[11px] text-gray-400">Total registered passes in roster</p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-1">
+            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
+              Verified Check-Ins
+            </span>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-600 font-sans">
+              {filteredRegistrations.filter(r => r.attended).length}
+            </div>
+            <p className="text-[11px] text-emerald-600/80">Students scanned &amp; admitted at gate</p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-white border border-gray-200 shadow-xs space-y-1">
+            <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">
+              Pending Arrival
+            </span>
+            <div className="text-2xl sm:text-3xl font-black text-amber-600 font-sans">
+              {filteredRegistrations.filter(r => !r.attended).length}
+            </div>
+            <p className="text-[11px] text-amber-600/80">Awaiting gate QR scan</p>
+          </div>
+        </div>
+      )}
 
       {/* Filter / Search Bar (For Admin/Club Admin on Roster view) */}
       {!isMyView && (

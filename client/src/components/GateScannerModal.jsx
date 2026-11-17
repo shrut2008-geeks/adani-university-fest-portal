@@ -22,7 +22,7 @@ function playBeep(success = true) {
 
 export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheckInSuccess }) => {
   const { token } = useAuth();
-  const [activeTab, setActiveTab] = useState('quick'); // 'quick' | 'camera'
+  const [activeTab, setActiveTab] = useState('camera'); // Default to QR Camera Scanner
   const [passInput, setPassInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [scanResult, setScanResult] = useState(null);
@@ -34,7 +34,10 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
   const scanIntervalRef = useRef(null);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      setActiveTab('camera');
+      startCamera();
+    } else {
       stopCamera();
       setScanResult(null);
       setPassInput('');
@@ -210,17 +213,6 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
         {/* Tab Selector */}
         <div className="flex border-b border-gray-200 bg-gray-50/70 p-1.5 gap-1.5">
           <button
-            onClick={() => { setActiveTab('quick'); stopCamera(); }}
-            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-              activeTab === 'quick'
-                ? 'bg-white text-[#6B1B6E] shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Search className="w-3.5 h-3.5" />
-            <span>Pass Code Lookup</span>
-          </button>
-          <button
             onClick={() => { setActiveTab('camera'); startCamera(); }}
             className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
               activeTab === 'camera'
@@ -229,7 +221,18 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
             }`}
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>Camera Scanner</span>
+            <span>Live QR Scanner</span>
+          </button>
+          <button
+            onClick={() => { setActiveTab('quick'); stopCamera(); }}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'quick'
+                ? 'bg-white text-[#6B1B6E] shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Search className="w-3.5 h-3.5" />
+            <span>Manual Pass Lookup</span>
           </button>
         </div>
 

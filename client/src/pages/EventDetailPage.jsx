@@ -5,6 +5,7 @@ import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
 import { MaskedAvatars } from '../components/MaskedAvatars';
 import { TestimonialCard } from '../components/TestimonialCard';
+import { PassQRModal } from '../components/PassQRModal';
 import { getGoogleCalendarUrl, downloadIcsFile } from '../utils/calendar';
 import { 
   Calendar, 
@@ -22,7 +23,8 @@ import {
   AlertCircle,
   MessageSquare,
   ExternalLink,
-  Download
+  Download,
+  QrCode
 } from 'lucide-react';
 
 export const EventDetailPage = () => {
@@ -43,6 +45,7 @@ export const EventDetailPage = () => {
   const [isAddOrganiserOpen, setIsAddOrganiserOpen] = useState(false);
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [generatedPassModal, setGeneratedPassModal] = useState(null);
 
   // Forms
   const [organiserForm, setOrganiserForm] = useState({ member_id: '', role: '' });
@@ -113,7 +116,18 @@ export const EventDetailPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
 
-      alert(data.message || 'Successfully registered!');
+      // Automatically pop open student's generated digital pass badge with QR code!
+      const newReg = data.registration;
+      setGeneratedPassModal({
+        id: newReg?.id,
+        event_id: event.id,
+        event_title: event.title,
+        club_name: event.club_name,
+        event_date: event.date,
+        venue_name: event.venue_name,
+        email: user?.email,
+        attended: false
+      });
       fetchEventDetail();
     } catch (err) {
       alert(`Registration Error: ${err.message}`);
@@ -345,10 +359,32 @@ export const EventDetailPage = () => {
           {/* Registration / Student Action */}
           <div className="flex flex-col sm:flex-row lg:flex-col items-start lg:items-end gap-3 min-w-[200px]">
             {isUserRegistered ? (
-              <div className="px-5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2">
-                <Check className="w-4 h-4" />
-                <span>You are Registered</span>
-                {isUserAttended && <span className="ml-1 text-[10px] bg-emerald-200/60 px-2 py-0.5 rounded">Checked In</span>}
+              <div className="flex flex-col items-start lg:items-end gap-2">
+                <div className="px-5 py-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  <span>Entry Confirmed</span>
+                  {isUserAttended && <span className="ml-1 text-[10px] bg-emerald-200/60 px-2 py-0.5 rounded">Checked In</span>}
+                </div>
+                <button
+                  onClick={() => {
+                    const myReg = event.registrations?.find(r => r.user_id === user?.id);
+                    setGeneratedPassModal({
+                      id: myReg?.id,
+                      event_id: event.id,
+                      event_title: event.title,
+                      club_name: event.club_name,
+                      event_date: event.date,
+                      venue_name: event.venue_name,
+                      email: user?.email,
+                      attended: myReg?.attended
+                    });
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-95"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  View QR Pass
+                </button>
               </div>
             ) : isFull ? (
               <button
@@ -924,6 +960,13 @@ export const EventDetailPage = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Generated Digital Pass Modal */}
+      <PassQRModal
+        isOpen={Boolean(generatedPassModal)}
+        onClose={() => setGeneratedPassModal(null)}
+        registration={generatedPassModal}
+      />
     </div>
   );
 };
