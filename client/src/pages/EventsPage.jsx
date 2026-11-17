@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext';
 import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
 import { CalendarView } from '../components/CalendarView';
+import { PassQRModal } from '../components/PassQRModal';
 import { getGoogleCalendarUrl, downloadIcsFile } from '../utils/calendar';
 import { 
   Calendar, 
@@ -15,14 +16,16 @@ import {
   Edit, 
   Trash2, 
   Ticket, 
-  ArrowRight,
+  ArrowRight, 
   AlertCircle,
   X,
   Filter,
   LayoutGrid,
   CalendarDays,
   ExternalLink,
-  Download
+  Download,
+  CheckCircle,
+  Check
 } from 'lucide-react';
 
 // Shared fill percentage function: 1 decimal place (e.g. 0.4%)
@@ -74,6 +77,8 @@ export const EventsPage = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [registeringId, setRegisteringId] = useState(null);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'calendar'
+  const [myRegistrations, setMyRegistrations] = useState([]);
+  const [selectedPassForQr, setSelectedPassForQr] = useState(null);
 
   const statuses = ['All', 'Planned', 'Ongoing', 'Completed'];
 
@@ -105,6 +110,25 @@ export const EventsPage = () => {
   useEffect(() => {
     fetchMetadata();
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchMyRegistrations();
+    }
+  }, [isAuthenticated]);
+
+  const fetchMyRegistrations = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/registrations/my', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMyRegistrations(Array.isArray(data) ? data : []);
+      }
+    } catch (_) {}
+  };
 
   const hasActiveFilters = 
     statusFilter !== 'All' || 
@@ -276,6 +300,12 @@ export const EventsPage = () => {
       return;
     }
 
+    const targetEvt = events.find(e => e.id === evtId);
+    if (targetEvt && (targetEvt.status === 'Completed' || new Date(targetEvt.date) <= new Date())) {
+      toast.error(`Registration Closed: "${targetEvt.title}" has already concluded.`);
+      return;
+    }
+
     try {
       setRegisteringId(evtId);
       const res = await fetch('/api/registrations', {
@@ -289,6 +319,22 @@ export const EventsPage = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Registration failed');
       toast.success(data.message || 'Successfully registered for event! Pass issued.');
+
+      const targetEvt = events.find(e => e.id === evtId);
+      const newReg = data.registration || { id: Date.now(), event_id: evtId };
+      setMyRegistrations(prev => [...prev, { ...newReg, event_id: evtId, event_title: targetEvt?.title }]);
+
+      // Automatically pop open their new ticket badge with QR code!
+      setSelectedPassForQr({
+        id: newReg?.id,
+        event_id: evtId,
+        event_title: targetEvt?.title,
+        club_name: targetEvt?.club_name,
+        event_date: targetEvt?.date,
+        venue_name: targetEvt?.venue_name,
+        email: user?.email,
+        attended: false
+      });
       fetchEvents();
     } catch (err) {
       toast.error(err.message || 'Registration error');
@@ -631,48 +677,87 @@ export const EventsPage = () => {
                   </div>
 
                   {/* Action button based on event status & auth */}
-                  {evt.status === 'Completed' ? (
-                    <div className="w-full flex items-center justify-between py-2 px-3 rounded-xl text-xs bg-gray-50 border border-[var(--border)]">
-                      <span className="font-semibold text-gray-500">Event completed</span>
-                      {hasReviews && (
-                        <Link
-                          to={`/events/${evt.id}`}
-                          className="font-bold hover:underline transition-colors"
-                          style={{ color: 'var(--primary)' }}
+                  {(() => {
+                    const myReg = myRegistrations.find(r => r.event_id === evt.id);
+                    if (myReg) {
+                      return (
+                        <div className="flex items-center gap-2 w-full">
+                          <div className="flex-1 py-2 px-3 rounded-xl text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center gap-1.5">
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Registered</span>
+                          </div>
+                          <button
+                            onClick={() => setSelectedPassForQr({
+                              id: myReg.id,
+                              event_id: evt.id,
+                              event_title: evt.title,
+                              club_name: evt.club_name,
+                              event_date: evt.date,
+                              venue_name: evt.venue_name,
+                              email: user?.email,
+                              attended: myReg.attended
+                            })}
+                            className="py-2 px-3 rounded-xl text-xs font-bold text-white shadow-xs hover:opacity-95"
+                            style={{ background: 'var(--primary)' }}
+                          >
+                            View Pass
+                          </button>
+                        </div>
+                      );
+                    }
+                    const isConcluded = evt.status === 'Completed' || new Date(evt.date) <= new Date();
+                    if (isConcluded) {
+                      return (
+                        <div className="w-full flex items-center justify-between py-2 px-3 rounded-xl text-xs bg-gray-50 border border-[var(--border)]">
+                          <span className="font-semibold text-gray-500">Event Concluded (Closed)</span>
+                          {hasReviews && (
+                            <Link
+                              to={`/events/${evt.id}`}
+                              className="font-bold hover:underline transition-colors"
+                              style={{ color: 'var(--primary)' }}
+                            >
+                              Feedback
+                            </Link>
+                          )}
+                        </div>
+                      );
+                    }
+                    if (isFull) {
+                      return (
+                        <button
+                          disabled
+                          className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-gray-100 text-gray-400 cursor-not-allowed border border-[var(--border)]"
                         >
-                          View feedback
-                        </Link>
-                      )}
-                    </div>
-                  ) : isFull ? (
-                    <button
-                      disabled
-                      className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-gray-100 text-gray-400 cursor-not-allowed border border-[var(--border)]"
-                    >
-                      Full
-                    </button>
-                  ) : isAuthenticated ? (
-                    <button
-                      onClick={() => handleRegisterEvent(evt.id)}
-                      disabled={registeringId === evt.id}
-                      className="w-full py-2 px-3 rounded-xl text-xs font-bold text-white transition-all hover:opacity-95 shadow-sm"
-                      style={{ background: 'var(--primary)' }}
-                    >
-                      {registeringId === evt.id ? 'Registering...' : 'Register'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleRegisterEvent(evt.id)}
-                      className="w-full py-2 px-3 rounded-xl text-xs font-bold transition-all hover:bg-[var(--hero-bg)] border"
-                      style={{
-                        background: 'transparent',
-                        borderColor: 'var(--primary)',
-                        color: 'var(--primary)'
-                      }}
-                    >
-                      Sign in to register
-                    </button>
-                  )}
+                          Full
+                        </button>
+                      );
+                    }
+                    if (isAuthenticated) {
+                      return (
+                        <button
+                          onClick={() => handleRegisterEvent(evt.id)}
+                          disabled={registeringId === evt.id}
+                          className="w-full py-2 px-3 rounded-xl text-xs font-bold text-white transition-all hover:opacity-95 shadow-sm"
+                          style={{ background: 'var(--primary)' }}
+                        >
+                          {registeringId === evt.id ? 'Registering...' : 'Register'}
+                        </button>
+                      );
+                    }
+                    return (
+                      <button
+                        onClick={() => handleRegisterEvent(evt.id)}
+                        className="w-full py-2 px-3 rounded-xl text-xs font-bold transition-all hover:bg-[var(--hero-bg)] border"
+                        style={{
+                          background: 'transparent',
+                          borderColor: 'var(--primary)',
+                          color: 'var(--primary)'
+                        }}
+                      >
+                        Sign in to register
+                      </button>
+                    );
+                  })()}
                 </div>
               </div>
             );
@@ -891,6 +976,13 @@ export const EventsPage = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Generated Digital Pass Modal */}
+      <PassQRModal
+        isOpen={Boolean(selectedPassForQr)}
+        onClose={() => setSelectedPassForQr(null)}
+        registration={selectedPassForQr}
+      />
     </div>
   );
 };

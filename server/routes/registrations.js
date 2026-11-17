@@ -171,10 +171,12 @@ router.post('/', verifyToken, async (req, res, next) => {
 
     const event = eventCheck.rows[0];
 
-    // Reject registration if event is already completed
-    if (event.status === 'Completed') {
+    // Reject registration if event is already completed or its date has passed
+    const now = new Date();
+    const eventDate = new Date(event.date);
+    if (event.status === 'Completed' || eventDate <= now) {
       return res.status(400).json({
-        message: `Registration Closed: "${event.title}" has already completed.`
+        message: `Registration Closed: "${event.title}" has already concluded.`
       });
     }
 

@@ -103,6 +103,13 @@ export const EventDetailPage = () => {
       alert('Please sign in to register for events.');
       return;
     }
+
+    const isConcluded = event?.status === 'Completed' || new Date(event?.date) <= new Date();
+    if (isConcluded) {
+      alert(`Registration Closed: "${event?.title}" has already concluded.`);
+      return;
+    }
+
     setActionLoading(true);
     try {
       const res = await fetch('/api/registrations', {
@@ -386,6 +393,13 @@ export const EventDetailPage = () => {
                   View QR Pass
                 </button>
               </div>
+            ) : (event.status === 'Completed' || new Date(event.date) <= new Date()) ? (
+              <button
+                disabled
+                className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs sm:text-sm bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed shadow-none"
+              >
+                Registration Closed (Event Concluded)
+              </button>
             ) : isFull ? (
               <button
                 disabled

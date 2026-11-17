@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, CheckCircle2, XCircle, X, Search, RefreshCw, Zap, ShieldCheck } from 'lucide-react';
+import jsQR from 'jsqr';
 import { useAuth } from '../context/AuthContext';
 
 // Simple Web Audio API beep for affirmative scan audio feedback
@@ -21,7 +22,7 @@ function playBeep(success = true) {
 }
 
 export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheckInSuccess }) => {
-  const { token } = useAuth();
+  const { token, isRole } = useAuth();
   const [activeTab, setActiveTab] = useState('camera'); // Default to QR Camera Scanner
   const [passInput, setPassInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,7 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
   const scanIntervalRef = useRef(null);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isRole('admin')) {
       setActiveTab('camera');
       startCamera();
     } else {
@@ -42,10 +43,14 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
       setScanResult(null);
       setPassInput('');
     }
-  }, [isOpen]);
+  }, [isOpen, isRole]);
+
+  // Strict Security Guard: Students are blocked; only campus Admins can access the Gate Scanner
+  if (!isOpen || !isRole('admin')) return null;
 
   const stopCamera = () => {
     if (scanIntervalRef.current) {
+      clearTimeout(scanIntervalRef.current);
       clearInterval(scanIntervalRef.current);
       scanIntervalRef.current = null;
     }
@@ -60,42 +65,55 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
     setCameraError('');
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera access not supported on this browser/connection. Please use Pass Code Lookup.');
+        throw new Error('Camera access not supported on this browser/connection. Please use Manual Pass Lookup.');
       }
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' }
+        video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
       });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        videoRef.current.setAttribute('playsinline', 'true');
+        videoRef.current.play().catch(() => {});
       }
       setCameraActive(true);
 
-      // Start automatic live QR detection if BarcodeDetector API is supported
-      if ('BarcodeDetector' in window) {
-        try {
-          const barcodeDetector = new window.BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13'] });
-          scanIntervalRef.current = setInterval(async () => {
-            if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
-              try {
-                const barcodes = await barcodeDetector.detect(videoRef.current);
-                if (barcodes.length > 0) {
-                  const rawVal = barcodes[0].rawValue;
-                  if (rawVal) {
-                    stopCamera();
-                    handleProcessCheckIn(rawVal);
-                  }
-                }
-              } catch {
-                // Ignore transient frame decode errors
-              }
+      // Off-screen canvas for real-time jsQR video frame decoding
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      let isScanning = true;
+
+      const scanFrame = () => {
+        if (!isScanning) return;
+
+        const video = videoRef.current;
+        if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          
+          try {
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'dontInvert'
+            });
+
+            if (qrCode && qrCode.data) {
+              isScanning = false;
+              stopCamera();
+              handleProcessCheckIn(qrCode.data);
+              return;
             }
-          }, 300);
-        } catch {
-          // Fallback
+          } catch {
+            // Ignore temporary frame capture errors
+          }
         }
-      }
+
+        scanIntervalRef.current = setTimeout(scanFrame, 120);
+      };
+
+      // Start scanning loop
+      scanIntervalRef.current = setTimeout(scanFrame, 300);
     } catch (err) {
       setCameraError(err.message || 'Unable to access camera.');
       setCameraActive(false);

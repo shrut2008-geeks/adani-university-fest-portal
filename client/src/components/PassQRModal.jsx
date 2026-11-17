@@ -72,7 +72,7 @@ export const PassQRModal = ({ isOpen, onClose, registration }) => {
             </div>
           ) : (
             <p className="text-[11px] text-gray-500">
-              Present this QR pass or PASS-#{registration.id} at the entrance gate for check-in.
+              Present this QR pass to the event coordinator or gate admin at the entrance door to scan and check in.
             </p>
           )}
 
