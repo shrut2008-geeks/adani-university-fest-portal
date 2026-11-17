@@ -5,7 +5,7 @@ import { X, Ticket, Calendar, MapPin, CheckCircle, Printer, Download } from 'luc
 export const PassQRModal = ({ isOpen, onClose, registration }) => {
   if (!isOpen || !registration) return null;
 
-  const passString = `AUFEST:PASS:${registration.id}:EVENT:${registration.event_id}:USER:${registration.user_id}`;
+  const passString = `PASS-#${registration.id}`;
   const formattedDate = registration.event_date
     ? new Date(registration.event_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
     : 'TBD';

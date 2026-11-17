@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, CheckCircle2, XCircle, X, Search, RefreshCw, Zap, Volume2, ShieldCheck } from 'lucide-react';
+import { Camera, CheckCircle2, XCircle, X, Search, RefreshCw, Zap, ShieldCheck } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
-// Simple Web Audio API beep for scan feedback (zero external audio files needed)
+// Simple Web Audio API beep for affirmative scan audio feedback
 function playBeep(success = true) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -10,25 +11,27 @@ function playBeep(success = true) {
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.type = success ? 'sine' : 'square';
-    osc.frequency.value = success ? 880 : 300; // 880Hz high pitch for success, 300Hz low for error
+    osc.frequency.value = success ? 880 : 300;
     gain.gain.setValueAtTime(0.1, ctx.currentTime);
     osc.start();
     osc.stop(ctx.currentTime + (success ? 0.15 : 0.25));
-  } catch (e) {
-    // Audio autoplay blocked or unsupported
+  } catch {
+    // Autoplay blocked or unsupported
   }
 }
 
-export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }) => {
+export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheckInSuccess }) => {
+  const { token } = useAuth();
   const [activeTab, setActiveTab] = useState('quick'); // 'quick' | 'camera'
   const [passInput, setPassInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [scanResult, setScanResult] = useState(null); // { success: boolean, message: string, reg: object }
+  const [scanResult, setScanResult] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const scanIntervalRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen) {
@@ -39,6 +42,10 @@ export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }
   }, [isOpen]);
 
   const stopCamera = () => {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -50,7 +57,7 @@ export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }
     setCameraError('');
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera access not supported on this browser/connection.');
+        throw new Error('Camera access not supported on this browser/connection. Please use Pass Code Lookup.');
       }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' }
@@ -58,8 +65,34 @@ export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play();
       }
       setCameraActive(true);
+
+      // Start automatic live QR detection if BarcodeDetector API is supported
+      if ('BarcodeDetector' in window) {
+        try {
+          const barcodeDetector = new window.BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13'] });
+          scanIntervalRef.current = setInterval(async () => {
+            if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
+              try {
+                const barcodes = await barcodeDetector.detect(videoRef.current);
+                if (barcodes.length > 0) {
+                  const rawVal = barcodes[0].rawValue;
+                  if (rawVal) {
+                    stopCamera();
+                    handleProcessCheckIn(rawVal);
+                  }
+                }
+              } catch {
+                // Ignore transient frame decode errors
+              }
+            }
+          }, 400);
+        } catch {
+          // BarcodeDetector initialization fallback
+        }
+      }
     } catch (err) {
       setCameraError(err.message || 'Unable to access camera.');
       setCameraActive(false);
@@ -69,12 +102,17 @@ export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }
   const handleProcessCheckIn = async (passId) => {
     if (!passId) return;
 
-    // Clean input: extract numeric ID from "PASS-#123", "REG-#123", "123", or QR string
-    const cleanedId = String(passId).replace(/[^0-9]/g, '');
+    // Extract numeric ID from "PASS-#123", "REG-#123", "AUFEST:PASS:123", or plain "123"
+    let cleanedId = null;
+    const match = String(passId).match(/(\d+)/);
+    if (match) {
+      cleanedId = match[1];
+    }
+
     if (!cleanedId) {
       setScanResult({
         success: false,
-        message: 'Invalid Pass ID. Please enter a valid registration number (e.g., PASS-#123 or 123).'
+        message: 'Invalid Pass format. Please enter a valid pass ID number (e.g. 1, PASS-#1).'
       });
       playBeep(false);
       return;
@@ -86,30 +124,35 @@ export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }
     try {
       const res = await fetch(`/api/registrations/${cleanedId}/toggle-attended`, {
         method: 'PATCH',
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        throw new Error(data.message || 'Registration record not found or unauthorized.');
+        throw new Error(data.message || `Pass #${cleanedId} not found in database roster.`);
       }
 
       const isAttended = data.registration?.attended;
       setScanResult({
         success: true,
         message: isAttended 
-          ? `PASS #${cleanedId} Verified: Check-in Successful! Seat confirmed.` 
-          : `PASS #${cleanedId} Updated: Marked as Absent.`,
+          ? `PASS #${cleanedId} Verified: Check-in Successful! Student marked as Attended.` 
+          : `PASS #${cleanedId} Status Updated: Marked as Absent / Check-in revoked.`,
         isAttended,
         passId: cleanedId
       });
       playBeep(true);
       setPassInput('');
+
       if (onAttendanceUpdated) onAttendanceUpdated();
+      if (onCheckInSuccess) onCheckInSuccess();
     } catch (err) {
       setScanResult({
         success: false,
-        message: err.message || 'Verification failed. Pass ID not found in database.'
+        message: err.message || `Check-in failed. PASS #${cleanedId} could not be verified.`
       });
       playBeep(false);
     } finally {
@@ -175,7 +218,7 @@ export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }
             }`}
           >
             <Camera className="w-3.5 h-3.5" />
-            <span>Camera Viewfinder</span>
+            <span>Camera Scanner</span>
           </button>
         </div>
 
@@ -197,7 +240,7 @@ export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }
                 <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               )}
               <div className="space-y-0.5">
-                <p className="text-sm font-bold">{scanResult.success ? 'Verified Attendance' : 'Scan Notice'}</p>
+                <p className="text-sm font-bold">{scanResult.success ? 'Verified Check-in' : 'Verification Notice'}</p>
                 <p className="font-medium text-xs leading-relaxed">{scanResult.message}</p>
               </div>
             </div>
@@ -208,7 +251,7 @@ export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }
             <form onSubmit={handleQuickSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                  Scan or Type Pass Number
+                  Enter Student Pass ID Number
                 </label>
                 <div className="relative">
                   <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -230,23 +273,8 @@ export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }
                 </div>
                 <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#6B1B6E]" />
-                  <span>Barcode scanners automatically trigger the check-in when reading attendee badges.</span>
+                  <span>Type student's pass number (e.g. 1, 2, 3) and press Enter to mark verified attendance.</span>
                 </p>
-              </div>
-
-              {/* Quick sample chips */}
-              <div className="pt-2 border-t border-gray-100 flex items-center gap-2 text-xs text-gray-500">
-                <span className="font-semibold text-[11px]">Quick Test:</span>
-                {[1, 2, 3].map(n => (
-                  <button
-                    key={n}
-                    type="button"
-                    onClick={() => handleProcessCheckIn(n)}
-                    className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-purple-100 text-[#6B1B6E] font-bold text-xs border border-purple-200 transition-colors"
-                  >
-                    PASS-#{n}
-                  </button>
-                ))}
               </div>
             </form>
           )}
@@ -275,15 +303,14 @@ export const GateScannerModal = ({ isOpen, onClose, token, onAttendanceUpdated }
                       muted
                       className="w-full h-full object-cover"
                     />
-                    {/* Viewfinder Target Reticle */}
                     <div className="absolute inset-8 border-2 border-dashed border-amber-300 rounded-xl pointer-events-none animate-pulse" />
                     <div className="absolute bottom-3 px-3 py-1 bg-black/60 backdrop-blur-xs rounded-full text-[10px] text-white font-medium">
-                      Align QR code inside frame
+                      Point camera at ticket QR code
                     </div>
                   </div>
 
                   <p className="text-xs text-gray-500">
-                    Camera scanning is active. Point device camera at the attendee's digital pass or printed QR badge.
+                    Camera viewfinder is active. If your browser supports native barcode detection, it checks in automatically.
                   </p>
                 </div>
               )}
