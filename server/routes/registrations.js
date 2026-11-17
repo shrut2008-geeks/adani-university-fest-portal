@@ -226,52 +226,59 @@ router.post('/', verifyToken, async (req, res, next) => {
 router.patch('/:id/toggle-attended', verifyToken, async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { action } = req.body || {}; // optional 'checkin' to force attended=true
 
-    // Check registration and event club
-    const regRes = await query(
-      `SELECT r.id, r.attended, r.event_id, e.club_id
-       FROM registrations r
-       JOIN events e ON r.event_id = e.id
-       WHERE r.id = $1`,
-      [id]
-    );
+    let updated;
+    if (req.user.role === 'admin') {
+      // Fast path for admin gate check-in: 1 single query
+      const updateSql = action === 'checkin'
+        ? `UPDATE registrations SET attended = TRUE WHERE id = $1 RETURNING id, event_id, user_id, attended`
+        : `UPDATE registrations SET attended = NOT attended WHERE id = $1 RETURNING id, event_id, user_id, attended`;
 
-    if (regRes.rows.length === 0) {
-      return res.status(404).json({ message: 'Registration record not found.' });
-    }
-
-    const reg = regRes.rows[0];
-
-    // Role check
-    if (req.user.role === 'club_admin') {
-      const allowed = await isClubAdminForClub(req.user.id, reg.club_id);
+      const result = await query(updateSql, [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ message: 'Registration record not found.' });
+      }
+      updated = result.rows[0];
+    } else if (req.user.role === 'club_admin') {
+      const regRes = await query(
+        `SELECT r.id, r.attended, r.event_id, e.club_id
+         FROM registrations r
+         JOIN events e ON r.event_id = e.id
+         WHERE r.id = $1`,
+        [id]
+      );
+      if (regRes.rows.length === 0) {
+        return res.status(404).json({ message: 'Registration record not found.' });
+      }
+      const allowed = await isClubAdminForClub(req.user.id, regRes.rows[0].club_id);
       if (!allowed) {
         return res.status(403).json({ message: 'Forbidden. You can only manage registrations for your own club.' });
       }
-    } else if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Unauthorized.' });
+
+      const updateSql = action === 'checkin'
+        ? `UPDATE registrations SET attended = TRUE WHERE id = $1 RETURNING id, event_id, user_id, attended`
+        : `UPDATE registrations SET attended = NOT attended WHERE id = $1 RETURNING id, event_id, user_id, attended`;
+
+      const result = await query(updateSql, [id]);
+      updated = result.rows[0];
+    } else {
+      return res.status(403).json({ message: 'Unauthorized. Staff check-in credentials required.' });
     }
 
-    const updated = await query(
-      `UPDATE registrations 
-       SET attended = NOT attended 
-       WHERE id = $1 
-       RETURNING id, event_id, user_id, attended`,
-      [id]
-    );
-
-    await logAuditAction({
+    // Non-blocking background audit log: NEVER block or delay instant gate check-ins
+    logAuditAction({
       userId: req.user.id,
       userEmail: req.user.email,
-      action: updated.rows[0].attended ? 'CHECK_IN_MARKED' : 'CHECK_IN_REVOKED',
+      action: updated.attended ? 'CHECK_IN_MARKED' : 'CHECK_IN_REVOKED',
       entityType: 'registrations',
       entityId: id,
-      details: { event_id: updated.rows[0].event_id, attended: updated.rows[0].attended }
-    });
+      details: { event_id: updated.event_id, attended: updated.attended }
+    }).catch(() => {});
 
     return res.json({
-      message: `Attendance marked as ${updated.rows[0].attended ? 'Attended' : 'Absent'}`,
-      registration: updated.rows[0]
+      message: `PASS #${updated.id}: Attendance marked as ${updated.attended ? 'Attended' : 'Absent'}`,
+      registration: updated
     });
   } catch (err) {
     next(err);

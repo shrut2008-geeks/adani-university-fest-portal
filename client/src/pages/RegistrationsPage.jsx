@@ -599,8 +599,12 @@ export const RegistrationsPage = () => {
           setIsGateScannerOpen(false);
           fetchRegistrations();
         }}
-        onCheckInSuccess={() => {
-          fetchRegistrations();
+        onCheckInSuccess={(regId, isAttended = true) => {
+          if (regId) {
+            setRegistrations(prev =>
+              prev.map(r => String(r.id) === String(regId) ? { ...r, attended: isAttended } : r)
+            );
+          }
         }}
       />
     </div>

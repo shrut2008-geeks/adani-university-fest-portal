@@ -14,7 +14,7 @@ function playBeep(success = true) {
     osc.frequency.value = success ? 880 : 300;
     gain.gain.setValueAtTime(0.1, ctx.currentTime);
     osc.start();
-    osc.stop(ctx.currentTime + (success ? 0.15 : 0.25));
+    osc.stop(ctx.currentTime + (success ? 0.12 : 0.2));
   } catch {
     // Autoplay blocked or unsupported
   }
@@ -88,9 +88,9 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
                 // Ignore transient frame decode errors
               }
             }
-          }, 400);
+          }, 300);
         } catch {
-          // BarcodeDetector initialization fallback
+          // Fallback
         }
       }
     } catch (err) {
@@ -118,8 +118,21 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
       return;
     }
 
+    // INSTANT OPTIMISTIC FEEDBACK: 0ms response time
+    playBeep(true);
+    setScanResult({
+      success: true,
+      message: `PASS #${cleanedId} Verified: Check-in Successful! Student marked as Attended.`,
+      isAttended: true,
+      passId: cleanedId
+    });
+    setPassInput('');
+
+    // Immediately notify parent components so the attendance roster turns green instantly!
+    if (onAttendanceUpdated) onAttendanceUpdated(cleanedId, true);
+    if (onCheckInSuccess) onCheckInSuccess(cleanedId, true);
+
     setLoading(true);
-    setScanResult(null);
 
     try {
       const res = await fetch(`/api/registrations/${cleanedId}/toggle-attended`, {
@@ -127,7 +140,8 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ action: 'checkin' })
       });
       const data = await res.json().catch(() => ({}));
 
@@ -135,26 +149,23 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
         throw new Error(data.message || `Pass #${cleanedId} not found in database roster.`);
       }
 
-      const isAttended = data.registration?.attended;
+      // Re-confirm from server response
+      const isAttended = data.registration?.attended ?? true;
       setScanResult({
         success: true,
-        message: isAttended 
-          ? `PASS #${cleanedId} Verified: Check-in Successful! Student marked as Attended.` 
-          : `PASS #${cleanedId} Status Updated: Marked as Absent / Check-in revoked.`,
+        message: `PASS #${cleanedId} Verified: Check-in Successful! Student marked as ${isAttended ? 'Attended' : 'Absent'}.`,
         isAttended,
         passId: cleanedId
       });
-      playBeep(true);
-      setPassInput('');
-
-      if (onAttendanceUpdated) onAttendanceUpdated();
-      if (onCheckInSuccess) onCheckInSuccess();
     } catch (err) {
+      // Revert optimistic update on failure
       setScanResult({
         success: false,
         message: err.message || `Check-in failed. PASS #${cleanedId} could not be verified.`
       });
       playBeep(false);
+      if (onAttendanceUpdated) onAttendanceUpdated(cleanedId, false);
+      if (onCheckInSuccess) onCheckInSuccess(cleanedId, false);
     } finally {
       setLoading(false);
     }
@@ -185,7 +196,7 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
             </div>
             <div>
               <h3 className="text-lg font-bold tracking-tight text-white">Event Gate Check-in</h3>
-              <p className="text-xs text-purple-200">Rapid attendee pass verification &amp; scanner</p>
+              <p className="text-xs text-purple-200">Instant attendee pass verification &amp; scanner</p>
             </div>
           </div>
           <button
@@ -228,7 +239,7 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
           {/* Result Alert Banner */}
           {scanResult && (
             <div 
-              className={`p-4 rounded-2xl text-xs font-semibold flex items-start gap-3 animate-fade-in ${
+              className={`p-4 rounded-2xl text-xs font-semibold flex items-start gap-3 transition-all ${
                 scanResult.success
                   ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                   : 'bg-rose-50 text-rose-800 border border-rose-200'
@@ -239,7 +250,7 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
               ) : (
                 <XCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               )}
-              <div className="space-y-0.5">
+              <div className="space-y-0.5 flex-1">
                 <p className="text-sm font-bold">{scanResult.success ? 'Verified Check-in' : 'Verification Notice'}</p>
                 <p className="font-medium text-xs leading-relaxed">{scanResult.message}</p>
               </div>
@@ -265,15 +276,15 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
                   />
                   <button
                     type="submit"
-                    disabled={loading || !passInput.trim()}
+                    disabled={!passInput.trim()}
                     className="absolute right-2 top-1/2 -translate-y-1/2 px-3.5 py-1.5 rounded-xl bg-[#6B1B6E] text-white text-xs font-bold hover:opacity-95 disabled:opacity-50 transition-all shadow-xs"
                   >
-                    {loading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Check In'}
+                    Check In
                   </button>
                 </div>
                 <p className="text-[11px] text-gray-500 mt-1.5 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-[#6B1B6E]" />
-                  <span>Type student's pass number (e.g. 1, 2, 3) and press Enter to mark verified attendance.</span>
+                  <span>Type student's pass number (e.g. 1, 2, 3) and press Enter for instant check-in.</span>
                 </p>
               </div>
             </form>
