@@ -59,14 +59,23 @@ router.post('/', verifyToken, async (req, res, next) => {
       });
     }
 
-    // Role verification: admin can do for any club, club_admin can only do for their club
-    if (req.user.role === 'club_admin') {
+    // Role verification:
+    // - Authenticated students (or any user) can join a club themselves as a 'Member'
+    // - Club admins can add members to their own club
+    // - System admins can add members to any club
+    const isSelfJoining = parseInt(user_id, 10) === req.user.id;
+
+    if (isSelfJoining) {
+      if (position !== 'Member' && req.user.role !== 'admin') {
+        return res.status(403).json({ message: 'Forbidden. Self-registration is only allowed as a regular Member.' });
+      }
+    } else if (req.user.role === 'club_admin') {
       const allowed = await isClubAdminForClub(req.user.id, club_id);
       if (!allowed) {
         return res.status(403).json({ message: 'Forbidden. You can only manage members for your own club.' });
       }
     } else if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Unauthorized.' });
+      return res.status(403).json({ message: 'Unauthorized. You cannot add other users to this club.' });
     }
 
     // Check if user exists
@@ -125,14 +134,13 @@ router.put('/:id', verifyToken, async (req, res, next) => {
       });
     }
 
-    const memberRes = await query(`SELECT id, club_id FROM members WHERE id = $1`, [id]);
+    const memberRes = await query(`SELECT id, club_id, user_id FROM members WHERE id = $1`, [id]);
     if (memberRes.rows.length === 0) {
       return res.status(404).json({ message: 'Member record not found.' });
     }
 
     const member = memberRes.rows[0];
-
-    // Authorization
+    // Authorization: only admin or club_admin can update member positions
     if (req.user.role === 'club_admin') {
       const allowed = await isClubAdminForClub(req.user.id, member.club_id);
       if (!allowed) {
@@ -158,15 +166,18 @@ router.delete('/:id', verifyToken, async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const memberRes = await query(`SELECT id, club_id FROM members WHERE id = $1`, [id]);
+    const memberRes = await query(`SELECT id, club_id, user_id FROM members WHERE id = $1`, [id]);
     if (memberRes.rows.length === 0) {
       return res.status(404).json({ message: 'Member record not found.' });
     }
 
     const member = memberRes.rows[0];
+    const isSelf = member.user_id === req.user.id;
 
-    // Authorization
-    if (req.user.role === 'club_admin') {
+    // Authorization: self-removal is allowed, admin can remove anyone, club_admin can remove for their club
+    if (isSelf) {
+      // Allowed to leave club
+    } else if (req.user.role === 'club_admin') {
       const allowed = await isClubAdminForClub(req.user.id, member.club_id);
       if (!allowed) {
         return res.status(403).json({ message: 'Forbidden. You can only manage members for your own club.' });

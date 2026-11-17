@@ -40,6 +40,21 @@ export const AuthProvider = ({ children }) => {
     fetchCurrentUser();
   }, [token]);
 
+  const refreshUser = async () => {
+    if (!token) return;
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+      }
+    } catch (err) {
+      console.error('Failed to refresh user:', err);
+    }
+  };
+
   const login = async (email, password) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -94,6 +109,7 @@ export const AuthProvider = ({ children }) => {
       login,
       register,
       logout,
+      refreshUser,
       isRole,
       isAuthenticated: !!user
     }}>

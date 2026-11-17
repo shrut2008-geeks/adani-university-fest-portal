@@ -14,6 +14,7 @@ import {
   FolderPlus,
   AlertCircle,
   UserPlus,
+  Check,
   X,
   Filter
 } from 'lucide-react';
@@ -24,7 +25,7 @@ const pluralMember = (count) => {
 };
 
 export const ClubsPage = () => {
-  const { user, isRole, token, isAuthenticated } = useAuth();
+  const { user, isRole, token, isAuthenticated, refreshUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -217,6 +218,7 @@ export const ClubsPage = () => {
       if (!res.ok) throw new Error(data.message || 'Failed to join club');
       toast.success(`Welcome to ${clubName}! Your membership has been registered.`);
       fetchClubs();
+      if (refreshUser) refreshUser();
     } catch (err) {
       toast.error(err.message || 'Membership notice');
     } finally {
@@ -432,19 +434,28 @@ export const ClubsPage = () => {
                   </div>
 
                   {/* Join club button */}
-                  <button
-                    onClick={() => handleJoinClub(club.id, club.name)}
-                    disabled={joiningClubId === club.id}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all hover:opacity-90"
-                    style={{
-                      background: 'var(--hero-bg)',
-                      color: 'var(--primary)',
-                      border: '1px solid var(--border)'
-                    }}
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    {joiningClubId === club.id ? 'Joining...' : isAuthenticated ? 'Join club' : 'Sign in to join'}
-                  </button>
+                  {user?.clubs?.some(c => c.id === club.id) ? (
+                    <div
+                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      Joined
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleJoinClub(club.id, club.name)}
+                      disabled={joiningClubId === club.id}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition-all hover:opacity-90"
+                      style={{
+                        background: 'var(--hero-bg)',
+                        color: 'var(--primary)',
+                        border: '1px solid var(--border)'
+                      }}
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      {joiningClubId === club.id ? 'Joining...' : isAuthenticated ? 'Join club' : 'Sign in to join'}
+                    </button>
+                  )}
                 </div>
               </div>
             );
