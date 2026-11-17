@@ -14,6 +14,9 @@ const sponsorsRoutes = require('./routes/sponsors');
 const organisersRoutes = require('./routes/organisers');
 const feedbackRoutes = require('./routes/feedback');
 const reportsRoutes = require('./routes/reports');
+const announcementsRoutes = require('./routes/announcements');
+const expensesRoutes = require('./routes/expenses');
+const teamsRoutes = require('./routes/teams');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -40,6 +43,9 @@ app.use('/api/sponsors', sponsorsRoutes);
 app.use('/api/organisers', organisersRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/announcements', announcementsRoutes);
+app.use('/api/expenses', expensesRoutes);
+app.use('/api/teams', teamsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

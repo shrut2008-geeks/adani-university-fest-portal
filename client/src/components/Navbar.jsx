@@ -12,7 +12,9 @@ import {
   LogIn, 
   Menu, 
   X,
-  ExternalLink
+  ExternalLink,
+  Award,
+  User
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -20,13 +22,14 @@ export const Navbar = () => {
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Requirement: Menu: Dashboard, Clubs, Events, Registrations (or My Registrations), Reports
+  // Requirement: Menu: Dashboard, Clubs, Events, Registrations (or My Registrations), Reports, My Portfolio (when logged in)
   const navLinks = [
     { name: 'Dashboard', path: '/', icon: Home },
     { name: 'Clubs', path: '/clubs', icon: Users },
     { name: 'Events', path: '/events', icon: Calendar },
     { name: (isAuthenticated && user?.role === 'student') ? 'My Registrations' : 'Registrations', path: '/registrations', icon: Ticket },
     { name: 'Reports', path: '/reports', icon: BarChart3 },
+    ...(isAuthenticated ? [{ name: 'My Portfolio', path: '/profile', icon: Award }] : []),
   ];
 
   const isActive = (path) => {
@@ -104,12 +107,12 @@ export const Navbar = () => {
 
             {isAuthenticated ? (
               <div className="flex items-center gap-3 pl-3 border-l border-[var(--border)]">
-                <div className="flex flex-col items-end">
-                  <span className="text-xs font-semibold truncate max-w-[150px]" style={{ color: 'var(--text)' }}>
+                <Link to="/profile" className="flex flex-col items-end group focus:outline-none" title="View Student Activity Portfolio">
+                  <span className="text-xs font-semibold truncate max-w-[150px] group-hover:text-[#74186E] transition-colors" style={{ color: 'var(--text)' }}>
                     {user?.email}
                   </span>
                   <StatusBadge status={user?.role} />
-                </div>
+                </Link>
                 <button
                   onClick={logout}
                   title="Sign Out"

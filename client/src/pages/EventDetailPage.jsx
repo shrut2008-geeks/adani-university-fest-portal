@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
+import { getGoogleCalendarUrl, downloadIcsFile } from '../utils/calendar';
 import { 
   Calendar, 
   MapPin, 
@@ -17,7 +18,9 @@ import {
   Check, 
   Clock, 
   AlertCircle,
-  MessageSquare
+  MessageSquare,
+  ExternalLink,
+  Download
 } from 'lucide-react';
 
 export const EventDetailPage = () => {
@@ -56,7 +59,9 @@ export const EventDetailPage = () => {
   const fetchEventDetail = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/events/${id}`);
+      const res = await fetch(`/api/events/${id}`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       if (!res.ok) throw new Error('Event not found');
       const data = await res.json();
       setEvent(data);
@@ -352,6 +357,28 @@ export const EventDetailPage = () => {
               </button>
             )}
 
+            {/* Add to Calendar buttons */}
+            <div className="flex items-center gap-2">
+              <a
+                href={getGoogleCalendarUrl(event)}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-700 bg-white border border-gray-300 shadow-xs hover:bg-gray-50 transition-colors"
+                title="Add to Google Calendar"
+              >
+                <Calendar className="w-3.5 h-3.5 text-[#74186E]" />
+                <span>Google Calendar</span>
+              </a>
+              <button
+                onClick={() => downloadIcsFile(event)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-700 bg-white border border-gray-300 shadow-xs hover:bg-gray-50 transition-colors"
+                title="Download Outlook / Apple iCal (.ics)"
+              >
+                <Download className="w-3.5 h-3.5 text-[#74186E]" />
+                <span>Download .ics</span>
+              </button>
+            </div>
+
             {/* Leave Feedback trigger */}
             <button
               onClick={() => {
@@ -390,7 +417,7 @@ export const EventDetailPage = () => {
         {[
           { id: 'registrations', label: `Registrations (${event.registrations?.length || 0})`, icon: Ticket },
           { id: 'organisers', label: `Organisers (${event.organisers?.length || 0})`, icon: Users },
-          { id: 'payments', label: `Sponsorship & Budget (${event.payments?.length || 0})`, icon: DollarSign },
+          ...(canManage ? [{ id: 'payments', label: `Sponsorship & Budget (${event.payments?.length || 0})`, icon: DollarSign }] : []),
           { id: 'feedback', label: `Feedback (${event.feedback?.length || 0})`, icon: MessageSquare },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -543,8 +570,8 @@ export const EventDetailPage = () => {
         </div>
       )}
 
-      {/* Tab 3: Sponsorship & Budget */}
-      {activeTab === 'payments' && (
+      {/* Tab 3: Sponsorship & Budget (Visible only to Admin and Club Admin) */}
+      {activeTab === 'payments' && canManage && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>

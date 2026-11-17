@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { StatusBadge } from '../components/StatusBadge';
@@ -25,8 +25,9 @@ const fillPct = (registered, capacity) => {
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 export const ReportsPage = () => {
-  const { user, token, isAuthenticated } = useAuth();
+  const { user, token, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const isAdmin = user?.role === 'admin';
 
   const [reports, setReports] = useState(null);
@@ -94,12 +95,18 @@ export const ReportsPage = () => {
         <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
           Reports are restricted to portal administrators. Please sign in with an admin account to view analytical reports.
         </p>
-        <Link to="/login"
-          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm text-white shadow-sm hover:opacity-95"
+        <button
+          onClick={() => {
+            if (isAuthenticated) {
+              logout();
+            }
+            navigate('/login');
+          }}
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm text-white shadow-sm hover:opacity-95 transition-all"
           style={{ background: 'var(--primary)' }}
         >
           <LogIn className="w-4 h-4" /> Sign In as Admin
-        </Link>
+        </button>
       </div>
     );
   }

@@ -1,6 +1,7 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const { query } = require('../db');
-const { verifyToken, isClubAdminForClub } = require('../middleware/auth');
+const { verifyToken, isClubAdminForClub, JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -175,19 +176,40 @@ router.get('/:id', async (req, res, next) => {
       [id]
     );
 
-    // 4. Payments and sponsorship breakdown
-    const paymentsRes = await query(
-      `SELECT p.id, p.event_id, p.sponsor_id, p.amount, p.status, s.name AS sponsor_name
-       FROM payments p
-       LEFT JOIN sponsors s ON p.sponsor_id = s.id
-       WHERE p.event_id = $1
-       ORDER BY p.id ASC`,
-      [id]
-    );
+    // 4. Payments and sponsorship breakdown (Visible only to Admin and Club Admin of this club)
+    let canViewPayments = false;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        if (decoded.role === 'admin') {
+          canViewPayments = true;
+        } else if (decoded.role === 'club_admin') {
+          canViewPayments = await isClubAdminForClub(decoded.id, event.club_id);
+        }
+      } catch (e) {
+        // invalid token; canViewPayments remains false
+      }
+    }
 
-    const totalApprovedSponsorship = paymentsRes.rows
-      .filter(p => p.status === 'Approved')
-      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    let payments = [];
+    let totalApprovedSponsorship = 0;
+
+    if (canViewPayments) {
+      const paymentsRes = await query(
+        `SELECT p.id, p.event_id, p.sponsor_id, p.amount, p.status, s.name AS sponsor_name
+         FROM payments p
+         LEFT JOIN sponsors s ON p.sponsor_id = s.id
+         WHERE p.event_id = $1
+         ORDER BY p.id ASC`,
+        [id]
+      );
+      payments = paymentsRes.rows;
+      totalApprovedSponsorship = payments
+        .filter(p => p.status === 'Approved')
+        .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+    }
 
     // 5. Feedback list
     const feedbackRes = await query(
@@ -203,7 +225,7 @@ router.get('/:id', async (req, res, next) => {
       ...event,
       registrations: registrationsRes.rows,
       organisers: organisersRes.rows,
-      payments: paymentsRes.rows,
+      payments,
       totalApprovedSponsorship,
       feedback: feedbackRes.rows
     });

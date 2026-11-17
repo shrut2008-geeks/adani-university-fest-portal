@@ -2,6 +2,7 @@ const express = require('express');
 const { query } = require('../db');
 const { verifyToken, requireRoles, isClubAdminForClub } = require('../middleware/auth');
 const { notify } = require('../notify');
+const { logAuditAction } = require('../utils/auditLogger');
 
 const router = express.Router();
 
@@ -259,6 +260,15 @@ router.patch('/:id/toggle-attended', verifyToken, async (req, res, next) => {
       [id]
     );
 
+    await logAuditAction({
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: updated.rows[0].attended ? 'CHECK_IN_MARKED' : 'CHECK_IN_REVOKED',
+      entityType: 'registrations',
+      entityId: id,
+      details: { event_id: updated.rows[0].event_id, attended: updated.rows[0].attended }
+    });
+
     return res.json({
       message: `Attendance marked as ${updated.rows[0].attended ? 'Attended' : 'Absent'}`,
       registration: updated.rows[0]
@@ -311,6 +321,16 @@ router.delete('/:id', verifyToken, async (req, res, next) => {
 
     // Deleting frees the seat for capacity checks and keeps reports consistent
     await query(`DELETE FROM registrations WHERE id = $1`, [id]);
+
+    await logAuditAction({
+      userId: req.user.id,
+      userEmail: req.user.email,
+      action: 'REGISTRATION_DELETED',
+      entityType: 'registrations',
+      entityId: id,
+      details: { event_title: reg.event_title, event_date: reg.event_date }
+    });
+
     return res.json({ message: 'Registration cancelled successfully.' });
   } catch (err) {
     next(err);
