@@ -5,11 +5,18 @@ const { logAuditAction } = require('../utils/auditLogger');
 
 const router = express.Router();
 
+let expensesTableChecked = false;
+let expensesTableAvailable = false;
+
 // GET /api/expenses - List expenses (Admin & Club Admin)
 router.get('/', verifyToken, async (req, res, next) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'club_admin') {
       return res.status(403).json({ message: 'Access denied. Administrator privileges required.' });
+    }
+
+    if (expensesTableChecked && !expensesTableAvailable) {
+      return res.json([]);
     }
 
     const { club_id, event_id } = req.query;
@@ -46,9 +53,13 @@ router.get('/', verifyToken, async (req, res, next) => {
     sql += ' ORDER BY ex.created_at DESC';
 
     const result = await query(sql, params);
+    expensesTableChecked = true;
+    expensesTableAvailable = true;
     return res.json(result.rows);
   } catch (err) {
     if (err.message && err.message.includes('relation "expenses" does not exist')) {
+      expensesTableChecked = true;
+      expensesTableAvailable = false;
       return res.json([]);
     }
     next(err);

@@ -1,24 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { Award, Sparkles, ExternalLink } from 'lucide-react';
 
+// High-profile baseline sponsors for AU Fest
+const BASELINE_SPONSORS = [
+  { id: 1, name: 'Adani Group', tier: 'Title Partner', color: '#6B1B6E' },
+  { id: 2, name: 'AWS Educate', tier: 'Cloud Partner', color: '#FF9900' },
+  { id: 3, name: 'GitHub Campus', tier: 'Developer Partner', color: '#24292E' },
+  { id: 4, name: 'Red Bull Energy', tier: 'Beverage Partner', color: '#DB0A40' },
+  { id: 5, name: 'Intel Innovation', tier: 'Hardware Partner', color: '#0071C5' },
+  { id: 6, name: 'Adani Solar', tier: 'Sustainability Partner', color: '#00853E' },
+  { id: 7, name: 'Postman Student', tier: 'API Partner', color: '#FF6C37' },
+  { id: 8, name: 'Polygon Labs', tier: 'Web3 Partner', color: '#8247E5' }
+];
+
 /**
  * Vengeance UI-inspired Logo Slider / Infinite Marquee
  * Continuous smooth scrolling marquee of official festival partners and sponsors.
  */
 export const LogoSlider = ({ title = "Proudly Powered By Official Fest Partners & Sponsors" }) => {
-  const [sponsors, setSponsors] = useState([]);
-
-  // High-profile baseline sponsors for AU Fest
-  const baselineSponsors = [
-    { id: 1, name: 'Adani Group', tier: 'Title Partner', color: '#6B1B6E' },
-    { id: 2, name: 'AWS Educate', tier: 'Cloud Partner', color: '#FF9900' },
-    { id: 3, name: 'GitHub Campus', tier: 'Developer Partner', color: '#24292E' },
-    { id: 4, name: 'Red Bull Energy', tier: 'Beverage Partner', color: '#DB0A40' },
-    { id: 5, name: 'Intel Innovation', tier: 'Hardware Partner', color: '#0071C5' },
-    { id: 6, name: 'Adani Solar', tier: 'Sustainability Partner', color: '#00853E' },
-    { id: 7, name: 'Postman Student', tier: 'API Partner', color: '#FF6C37' },
-    { id: 8, name: 'Polygon Labs', tier: 'Web3 Partner', color: '#8247E5' }
-  ];
+  const [sponsors, setSponsors] = useState(BASELINE_SPONSORS);
 
   useEffect(() => {
     fetchSponsors();
@@ -37,17 +37,17 @@ export const LogoSlider = ({ title = "Proudly Powered By Official Fest Partners 
             tier: s.tier || 'Associate Partner',
             color: '#6B1B6E'
           }));
-          setSponsors([...mapped, ...baselineSponsors]);
+          setSponsors([...mapped, ...BASELINE_SPONSORS]);
           return;
         }
       }
     } catch {
       // Graceful fallback to baseline
     }
-    setSponsors(baselineSponsors);
+    setSponsors(BASELINE_SPONSORS);
   };
 
-  const displayList = sponsors.length > 0 ? sponsors : baselineSponsors;
+  const displayList = sponsors.length > 0 ? sponsors : BASELINE_SPONSORS;
   // Duplicate list to achieve continuous infinite marquee loop
   const marqueeItems = [...displayList, ...displayList];
 

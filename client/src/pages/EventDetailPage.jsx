@@ -104,7 +104,7 @@ export const EventDetailPage = () => {
       return;
     }
 
-    const isConcluded = event?.status === 'Completed' || new Date(event?.date) <= new Date();
+    const isConcluded = event?.status === 'Completed' || (event?.date && new Date(event.date) <= new Date());
     if (isConcluded) {
       alert(`Registration Closed: "${event?.title}" has already concluded.`);
       return;
@@ -393,7 +393,7 @@ export const EventDetailPage = () => {
                   View QR Pass
                 </button>
               </div>
-            ) : (event.status === 'Completed' || new Date(event.date) <= new Date()) ? (
+            ) : (event.status === 'Completed' || (event.date && new Date(event.date) <= new Date())) ? (
               <button
                 disabled
                 className="w-full sm:w-auto px-6 py-3 rounded-xl font-bold text-xs sm:text-sm bg-gray-100 text-gray-500 border border-gray-200 cursor-not-allowed shadow-none"

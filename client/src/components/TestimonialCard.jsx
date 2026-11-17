@@ -64,37 +64,37 @@ export const TestimonialCard = ({ feedback }) => {
   );
 };
 
+// Baseline top student feedback for festival showcase
+const BASELINE_FEEDBACKS = [
+  {
+    id: 1,
+    rating: 5,
+    comment: 'The RoboWars challenge was world-class. The arena setup, live commentary, and fast gate pass verification made everything seamless!',
+    student_email: 'aarav.shah@adaniuni.ac.in',
+    event_title: 'RoboWars 2026'
+  },
+  {
+    id: 2,
+    rating: 5,
+    comment: 'Hackathon problem statements pushed us to build real AI applications. Great mentorship from industry sponsors!',
+    student_email: 'priya.patel@adaniuni.ac.in',
+    event_title: 'National Collegiate Hackathon'
+  },
+  {
+    id: 3,
+    rating: 5,
+    comment: 'Getting the verified participation certificate immediately after check-in with the university seal was awesome for our resumes.',
+    student_email: 'rohan.mehta@adaniuni.ac.in',
+    event_title: 'Cloud DevOps Symposium'
+  }
+];
+
 /**
  * Section component displaying a grid of top student feedback testimonials
  */
 export const TestimonialsSection = () => {
-  const [feedbacks, setFeedbacks] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // Baseline top student feedback for festival showcase
-  const baselineFeedbacks = [
-    {
-      id: 1,
-      rating: 5,
-      comment: 'The RoboWars challenge was world-class. The arena setup, live commentary, and fast gate pass verification made everything seamless!',
-      student_email: 'aarav.shah@adaniuni.ac.in',
-      event_title: 'RoboWars 2026'
-    },
-    {
-      id: 2,
-      rating: 5,
-      comment: 'Hackathon problem statements pushed us to build real AI applications. Great mentorship from industry sponsors!',
-      student_email: 'priya.patel@adaniuni.ac.in',
-      event_title: 'National Collegiate Hackathon'
-    },
-    {
-      id: 3,
-      rating: 5,
-      comment: 'Getting the verified participation certificate immediately after check-in with the university seal was awesome for our resumes.',
-      student_email: 'rohan.mehta@adaniuni.ac.in',
-      event_title: 'Cloud DevOps Symposium'
-    }
-  ];
+  const [feedbacks, setFeedbacks] = useState(BASELINE_FEEDBACKS);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchFeedbacks();
@@ -115,10 +115,10 @@ export const TestimonialsSection = () => {
     } finally {
       setLoading(false);
     }
-    setFeedbacks(baselineFeedbacks);
+    setFeedbacks(BASELINE_FEEDBACKS);
   };
 
-  const list = feedbacks.length > 0 ? feedbacks : baselineFeedbacks;
+  const list = feedbacks.length > 0 ? feedbacks : BASELINE_FEEDBACKS;
 
   return (
     <div className="space-y-4">

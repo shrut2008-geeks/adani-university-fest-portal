@@ -158,7 +158,7 @@ router.post('/', verifyToken, async (req, res, next) => {
 
     // 1. Fetch event and venue capacity
     const eventCheck = await query(
-       `SELECT e.id, e.title, e.status, e.venue_id, v.capacity, v.name AS venue_name
+       `SELECT e.id, e.title, e.date, e.status, e.venue_id, v.capacity, v.name AS venue_name
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.id
         WHERE e.id = $1`,
@@ -173,8 +173,8 @@ router.post('/', verifyToken, async (req, res, next) => {
 
     // Reject registration if event is already completed or its date has passed
     const now = new Date();
-    const eventDate = new Date(event.date);
-    if (event.status === 'Completed' || eventDate <= now) {
+    const isConcluded = event.status === 'Completed' || (event.date && new Date(event.date) <= now);
+    if (isConcluded) {
       return res.status(400).json({
         message: `Registration Closed: "${event.title}" has already concluded.`
       });

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import QRCodeLib from 'qrcode';
 
 /**
  * Official ISO/IEC 18004 Standard QR Code Generator
@@ -17,16 +16,21 @@ export const QRCode = ({
 
   useEffect(() => {
     let isMounted = true;
-    // Generate 100% compliant ISO QR code data URL
-    QRCodeLib.toDataURL(String(value), {
-      width: size * 2,
-      margin: 2,
-      color: {
-        dark: fgColor,
-        light: bgColor
-      },
-      errorCorrectionLevel: 'M'
-    })
+    
+    // Dynamically import qrcode so it doesn't inflate initial bundle size
+    import('qrcode')
+      .then((mod) => {
+        const QRCodeLib = mod.default || mod;
+        return QRCodeLib.toDataURL(String(value), {
+          width: size * 2,
+          margin: 2,
+          color: {
+            dark: fgColor,
+            light: bgColor
+          },
+          errorCorrectionLevel: 'M'
+        });
+      })
       .then((url) => {
         if (isMounted) setDataUrl(url);
       })

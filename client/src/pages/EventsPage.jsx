@@ -300,9 +300,9 @@ export const EventsPage = () => {
       return;
     }
 
-    const targetEvt = events.find(e => e.id === evtId);
-    if (targetEvt && (targetEvt.status === 'Completed' || new Date(targetEvt.date) <= new Date())) {
-      toast.error(`Registration Closed: "${targetEvt.title}" has already concluded.`);
+    const currentEvt = events.find(e => e.id === evtId);
+    if (currentEvt && (currentEvt.status === 'Completed' || (currentEvt.date && new Date(currentEvt.date) <= new Date()))) {
+      toast.error(`Registration Closed: "${currentEvt.title}" has already concluded.`);
       return;
     }
 
@@ -320,18 +320,17 @@ export const EventsPage = () => {
       if (!res.ok) throw new Error(data.message || 'Registration failed');
       toast.success(data.message || 'Successfully registered for event! Pass issued.');
 
-      const targetEvt = events.find(e => e.id === evtId);
       const newReg = data.registration || { id: Date.now(), event_id: evtId };
-      setMyRegistrations(prev => [...prev, { ...newReg, event_id: evtId, event_title: targetEvt?.title }]);
+      setMyRegistrations(prev => [...prev, { ...newReg, event_id: evtId, event_title: currentEvt?.title }]);
 
       // Automatically pop open their new ticket badge with QR code!
       setSelectedPassForQr({
         id: newReg?.id,
         event_id: evtId,
-        event_title: targetEvt?.title,
-        club_name: targetEvt?.club_name,
-        event_date: targetEvt?.date,
-        venue_name: targetEvt?.venue_name,
+        event_title: currentEvt?.title,
+        club_name: currentEvt?.club_name,
+        event_date: currentEvt?.date,
+        venue_name: currentEvt?.venue_name,
         email: user?.email,
         attended: false
       });
@@ -678,7 +677,7 @@ export const EventsPage = () => {
 
                   {/* Action button based on event status & auth */}
                   {(() => {
-                    const myReg = myRegistrations.find(r => r.event_id === evt.id);
+                    const myReg = myRegistrations.find(r => String(r.event_id) === String(evt.id));
                     if (myReg) {
                       return (
                         <div className="flex items-center gap-2 w-full">
@@ -705,7 +704,7 @@ export const EventsPage = () => {
                         </div>
                       );
                     }
-                    const isConcluded = evt.status === 'Completed' || new Date(evt.date) <= new Date();
+                    const isConcluded = evt.status === 'Completed' || (evt.date && new Date(evt.date) <= new Date());
                     if (isConcluded) {
                       return (
                         <div className="w-full flex items-center justify-between py-2 px-3 rounded-xl text-xs bg-gray-50 border border-[var(--border)]">

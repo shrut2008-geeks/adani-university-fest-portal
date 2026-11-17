@@ -2,35 +2,35 @@ import React, { useEffect, useState } from 'react';
 import { Megaphone, X, ChevronRight, AlertTriangle, Info, Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+// Default fallback campus alerts for AU Fest
+const FALLBACK_ANNOUNCEMENTS = [
+  {
+    id: 'fb-1',
+    title: 'RoboWars Venue Update',
+    message: 'RoboWars challenge venue moved to Tech Lab Alpha (Block B) due to lab testing. Schedule remains 2:00 PM.',
+    priority: 'urgent',
+    link: '/events'
+  },
+  {
+    id: 'fb-2',
+    title: 'Hackathon Submissions Open',
+    message: 'Round 1 problem statements for National Collegiate Hackathon are now live! Check in with your team pass.',
+    priority: 'info',
+    link: '/events'
+  },
+  {
+    id: 'fb-3',
+    title: 'Gate Pass QR Verification',
+    message: 'Download or snapshot your digital QR pass from "My Event Passes" for instant mobile scanner check-in at entry doors.',
+    priority: 'notice',
+    link: '/registrations'
+  }
+];
+
 export const AnnouncementBanner = () => {
-  const [announcements, setAnnouncements] = useState([]);
+  const [announcements, setAnnouncements] = useState(FALLBACK_ANNOUNCEMENTS);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissed, setDismissed] = useState(false);
-
-  // Default fallback campus alerts for AU Fest if API table has not yet been seeded
-  const fallbackAnnouncements = [
-    {
-      id: 'fb-1',
-      title: 'RoboWars Venue Update',
-      message: 'RoboWars challenge venue moved to Tech Lab Alpha (Block B) due to lab testing. Schedule remains 2:00 PM.',
-      priority: 'urgent',
-      link: '/events'
-    },
-    {
-      id: 'fb-2',
-      title: 'Hackathon Submissions Open',
-      message: 'Round 1 problem statements for National Collegiate Hackathon are now live! Check in with your team pass.',
-      priority: 'info',
-      link: '/events'
-    },
-    {
-      id: 'fb-3',
-      title: 'Gate Pass QR Verification',
-      message: 'Download or snapshot your digital QR pass from "My Event Passes" for instant mobile scanner check-in at entry doors.',
-      priority: 'notice',
-      link: '/registrations'
-    }
-  ];
 
   useEffect(() => {
     // Check if user dismissed recently

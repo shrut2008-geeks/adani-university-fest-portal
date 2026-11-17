@@ -35,8 +35,15 @@ const FALLBACK_ANNOUNCEMENTS = [
   }
 ];
 
+let tableChecked = false;
+let tableAvailable = false;
+
 // GET /api/announcements - Fetch all active announcements
 router.get('/', async (req, res) => {
+  if (tableChecked && !tableAvailable) {
+    return res.json(FALLBACK_ANNOUNCEMENTS);
+  }
+
   try {
     const result = await query(`
       SELECT id, title, message, priority, active, link, created_at
@@ -51,9 +58,12 @@ router.get('/', async (req, res) => {
         END,
         created_at DESC
     `);
+    tableChecked = true;
+    tableAvailable = true;
     return res.json(result.rows);
   } catch (err) {
-    // If table does not exist yet before migration, return fallback announcements safely
+    tableChecked = true;
+    tableAvailable = false;
     return res.json(FALLBACK_ANNOUNCEMENTS);
   }
 });
