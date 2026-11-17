@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
+import { LogoSlider } from '../components/LogoSlider';
 import { 
   DollarSign, 
   Plus, 
@@ -228,6 +229,9 @@ export const SponsorsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Infinite Partners & Sponsors Marquee */}
+      <LogoSlider title="Official Fest Corporate Partners & Sponsors" />
 
       {/* Highlights Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">

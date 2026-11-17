@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Modal } from '../components/Modal';
 import { StatusBadge } from '../components/StatusBadge';
+import { MaskedAvatars } from '../components/MaskedAvatars';
+import { TestimonialCard } from '../components/TestimonialCard';
 import { getGoogleCalendarUrl, downloadIcsFile } from '../utils/calendar';
 import { 
   Calendar, 
@@ -330,6 +332,14 @@ export const EventDetailPage = () => {
                 </span>
               )}
             </div>
+
+            {/* Overlapping Organisers Avatars */}
+            {event.organisers && event.organisers.length > 0 && (
+              <div className="flex items-center gap-3 pt-1">
+                <span className="text-xs font-semibold text-gray-500">Organising Leads:</span>
+                <MaskedAvatars members={event.organisers} maxDisplay={5} size="md" />
+              </div>
+            )}
           </div>
 
           {/* Registration / Student Action */}
@@ -696,29 +706,17 @@ export const EventDetailPage = () => {
               No feedback submitted for this event yet.
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {event.feedback?.map((f) => (
-                <div
+                <TestimonialCard
                   key={f.id}
-                  className="p-5 rounded-2xl bg-white border border-gray-200 shadow-sm space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-900">{f.email}</span>
-                    <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <Star
-                          key={star}
-                          className={`w-3.5 h-3.5 ${
-                            star <= f.rating ? 'text-amber-500 fill-amber-500' : 'text-gray-200'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-700 leading-relaxed">
-                    {f.comment || '(No written comment provided)'}
-                  </p>
-                </div>
+                  feedback={{
+                    rating: f.rating,
+                    comment: f.comment,
+                    student_email: f.email,
+                    event_title: event.title
+                  }}
+                />
               ))}
             </div>
           )}

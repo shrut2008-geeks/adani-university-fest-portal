@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { StatCard } from '../components/StatCard';
 import { StatusBadge } from '../components/StatusBadge';
+import { LogoSlider } from '../components/LogoSlider';
+import { TestimonialsSection } from '../components/TestimonialCard';
 import { useAuth } from '../context/AuthContext';
 import {
   Users,
@@ -204,6 +206,9 @@ export const DashboardPage = () => {
         )}
       </section>
 
+      {/* ── Official Festival Partners & Sponsors Marquee ── */}
+      <LogoSlider />
+
       {/* ── Upcoming Events + Participation ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
@@ -349,6 +354,9 @@ export const DashboardPage = () => {
           )}
         </div>
       </div>
+
+      {/* ── Student Feedback & Testimonials Showcase ── */}
+      <TestimonialsSection />
     </div>
   );
 };
