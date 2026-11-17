@@ -48,10 +48,7 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
     };
   }, [isOpen, isRole]);
 
-  // Strict Security Guard: Students are blocked; only campus Admins can access the Gate Scanner
-  if (!isOpen || !isRole('admin')) return null;
-
-  const stopCamera = () => {
+  function stopCamera() {
     if (scanIntervalRef.current) {
       clearTimeout(scanIntervalRef.current);
       clearInterval(scanIntervalRef.current);
@@ -62,9 +59,9 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
       streamRef.current = null;
     }
     setCameraActive(false);
-  };
+  }
 
-  const startCamera = async () => {
+  async function startCamera() {
     setCameraError('');
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -318,7 +315,7 @@ export const GateScannerModal = ({ isOpen, onClose, onAttendanceUpdated, onCheck
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !isRole('admin')) return null;
 
   return (
     <div 

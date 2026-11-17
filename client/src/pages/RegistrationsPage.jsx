@@ -628,21 +628,23 @@ export const RegistrationsPage = () => {
         registration={selectedRegForCert}
       />
 
-      {/* Volunteer Gate Scanner Modal (Admin & Club Admin) */}
-      <GateScannerModal
-        isOpen={isGateScannerOpen}
-        onClose={() => {
-          setIsGateScannerOpen(false);
-          fetchRegistrations();
-        }}
-        onCheckInSuccess={(regId, isAttended = true) => {
-          if (regId) {
-            setRegistrations(prev =>
-              prev.map(r => String(r.id) === String(regId) ? { ...r, attended: isAttended } : r)
-            );
-          }
-        }}
-      />
+      {/* Volunteer Gate Scanner Modal (Admin only, mounted only when opened) */}
+      {isRole('admin') && isGateScannerOpen && (
+        <GateScannerModal
+          isOpen={isGateScannerOpen}
+          onClose={() => {
+            setIsGateScannerOpen(false);
+            fetchRegistrations();
+          }}
+          onCheckInSuccess={(regId, isAttended = true) => {
+            if (regId) {
+              setRegistrations(prev =>
+                prev.map(r => String(r.id) === String(regId) ? { ...r, attended: isAttended } : r)
+              );
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

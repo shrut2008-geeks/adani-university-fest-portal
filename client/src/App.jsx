@@ -72,15 +72,54 @@ function AppContent() {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('AU Fest Error Caught:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center bg-[#FAF8FB]">
+          <div className="max-w-md w-full bg-white p-8 rounded-3xl border border-gray-200 shadow-xl space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-purple-50 text-[#6B1B6E] flex items-center justify-center text-xl font-bold">
+              🏛️
+            </div>
+            <h2 className="text-xl font-black text-gray-900">Something went wrong</h2>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              We encountered a temporary interface issue. Please click below to reload the portal.
+            </p>
+            <button
+              onClick={() => { window.location.href = '/'; }}
+              className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-[#6B1B6E] hover:opacity-95 shadow-sm transition-all"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <BrowserRouter>
-          <AppContent />
-        </BrowserRouter>
-      </ToastProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <ToastProvider>
+          <BrowserRouter>
+            <AppContent />
+          </BrowserRouter>
+        </ToastProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
