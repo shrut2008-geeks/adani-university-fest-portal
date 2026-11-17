@@ -4,6 +4,23 @@ const { verifyToken } = require('../middleware/auth');
 
 const router = express.Router();
 
+// GET all recent feedbacks (for Testimonials showcase)
+router.get('/', async (req, res, next) => {
+  try {
+    const result = await query(`
+      SELECT f.id, f.rating, f.comment, u.email AS student_email, e.title AS event_title
+      FROM feedback f
+      JOIN users u ON f.user_id = u.id
+      JOIN events e ON f.event_id = e.id
+      ORDER BY f.id DESC
+      LIMIT 10
+    `);
+    return res.json(result.rows);
+  } catch (err) {
+    return res.json([]);
+  }
+});
+
 // GET feedback for an event
 router.get('/event/:eventId', async (req, res, next) => {
   try {
