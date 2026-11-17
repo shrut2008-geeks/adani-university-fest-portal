@@ -1,28 +1,19 @@
-import React, { Suspense, lazy } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { Navbar } from './components/Navbar';
 import { AnnouncementBanner } from './components/AnnouncementBanner';
-
-// Route-level Code Splitting for ultrafast initial page loads on mobile & desktop
-const DashboardPage = lazy(() => import('./pages/DashboardPage').then(m => ({ default: m.DashboardPage })));
-const ClubsPage = lazy(() => import('./pages/ClubsPage').then(m => ({ default: m.ClubsPage })));
-const ClubDetailPage = lazy(() => import('./pages/ClubDetailPage').then(m => ({ default: m.ClubDetailPage })));
-const EventsPage = lazy(() => import('./pages/EventsPage').then(m => ({ default: m.EventsPage })));
-const EventDetailPage = lazy(() => import('./pages/EventDetailPage').then(m => ({ default: m.EventDetailPage })));
-const RegistrationsPage = lazy(() => import('./pages/RegistrationsPage').then(m => ({ default: m.RegistrationsPage })));
-const SponsorsPage = lazy(() => import('./pages/SponsorsPage').then(m => ({ default: m.SponsorsPage })));
-const ReportsPage = lazy(() => import('./pages/ReportsPage').then(m => ({ default: m.ReportsPage })));
-const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
-const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
-
-const PageLoader = () => (
-  <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
-    <div className="w-8 h-8 rounded-full border-2 border-[#6B1B6E]/30 border-t-[#6B1B6E] animate-spin" />
-    <span className="text-xs font-medium text-gray-400">Loading Adani Fest...</span>
-  </div>
-);
+import { DashboardPage } from './pages/DashboardPage';
+import { ClubsPage } from './pages/ClubsPage';
+import { ClubDetailPage } from './pages/ClubDetailPage';
+import { EventsPage } from './pages/EventsPage';
+import { EventDetailPage } from './pages/EventDetailPage';
+import { RegistrationsPage } from './pages/RegistrationsPage';
+import { SponsorsPage } from './pages/SponsorsPage';
+import { ReportsPage } from './pages/ReportsPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { LoginPage } from './pages/LoginPage';
 
 function AppContent() {
   const location = useLocation();
@@ -30,11 +21,9 @@ function AppContent() {
 
   if (isLoginPage) {
     return (
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
-      </Suspense>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+      </Routes>
     );
   }
 
@@ -44,21 +33,19 @@ function AppContent() {
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-8">
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/clubs" element={<ClubsPage />} />
-            <Route path="/clubs/:id" element={<ClubDetailPage />} />
-            <Route path="/events" element={<EventsPage />} />
-            <Route path="/events/:id" element={<EventDetailPage />} />
-            <Route path="/registrations" element={<RegistrationsPage />} />
-            <Route path="/my-registrations" element={<RegistrationsPage />} />
-            <Route path="/sponsors" element={<SponsorsPage />} />
-            <Route path="/reports" element={<ReportsPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
+        <Routes>
+          <Route path="/" element={<DashboardPage />} />
+          <Route path="/clubs" element={<ClubsPage />} />
+          <Route path="/clubs/:id" element={<ClubDetailPage />} />
+          <Route path="/events" element={<EventsPage />} />
+          <Route path="/events/:id" element={<EventDetailPage />} />
+          <Route path="/registrations" element={<RegistrationsPage />} />
+          <Route path="/my-registrations" element={<RegistrationsPage />} />
+          <Route path="/sponsors" element={<SponsorsPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
 
       {/* Footer: stays dark (--footer-bg) with light text */}
