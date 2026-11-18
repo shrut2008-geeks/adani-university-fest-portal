@@ -207,7 +207,13 @@ export const DashboardPage = () => {
       </section>
 
       {/* ── Official Festival Partners & Sponsors Marquee ── */}
-      <LogoSlider />
+      <section 
+        aria-label="Official Fest Partners & Sponsors" 
+        className="!mt-16 !mb-16"
+        style={{ marginTop: '64px', marginBottom: '64px' }}
+      >
+        <LogoSlider />
+      </section>
 
       {/* ── Upcoming Events + Participation ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
